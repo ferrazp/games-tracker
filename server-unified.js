@@ -5,8 +5,14 @@ import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabase, getDatabase, closeDatabase, DB_TYPE } from './db/database.js';
 import logger from './db/logger.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const backendPkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
 
 dotenv.config();
 
@@ -86,6 +92,10 @@ function requireJWT(req, res, next) {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/version', (req, res) => {
+  res.json({ version: backendPkg.version, name: backendPkg.name });
 });
 
 app.post('/auth/login', (req, res) => {

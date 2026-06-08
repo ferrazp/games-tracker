@@ -12,6 +12,7 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
 COPY db ./db
 COPY scripts ./scripts
 COPY server-unified.js ./
