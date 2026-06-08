@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import GameForm from './components/GameForm';
 import GameList from './components/GameList';
 import Login from './components/Login';
+import VersionBadge from './components/VersionBadge';
 import API_URL from './config';
 import './App.css';
 
@@ -65,9 +66,12 @@ function App() {
     <div className="App">
       <div className="app-header">
         <h1>Registro de Juegos</h1>
-        <div className="app-user">
+        <div className="app-header-right">
+          <VersionBadge />
+          <div className="app-user">
           <span className="app-user-name">{user?.username}</span>
           <button onClick={handleLogout} className="btn btn-logout">Salir</button>
+        </div>
         </div>
       </div>
       <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} />
