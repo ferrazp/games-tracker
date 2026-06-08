@@ -1,0 +1,39 @@
+{
+  "name": "games-backend",
+  "version": "1.0.0",
+  "description": "Games Tracker Backend - API REST para seguimiento de videojuegos con soporte dual SQLite/PostgreSQL",
+  "main": "server-unified.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server-unified.js",
+    "dev": "node server-unified.js",
+    "dev:sqlite": "set DB_TYPE=sqlite && node server-unified.js",
+    "dev:postgres": "set DB_TYPE=postgresql && node server-unified.js",
+    "start:sqlite": "set DB_TYPE=sqlite && node server-unified.js",
+    "start:postgres": "set DB_TYPE=postgresql && node server-unified.js",
+    "seed:catalog": "node scripts/seed-catalog.js",
+    "migrate": "node db/migrate.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.0",
+    "express-rate-limit": "^8.5.2",
+    "jsonwebtoken": "^9.0.3",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.11.3",
+    "pino": "^10.3.1",
+    "sqlite3": "^5.1.6"
+  },
+  "type": "module",
+  "devDependencies": {
+    "supertest": "^7.2.2"
+  }
+}

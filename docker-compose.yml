@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: games_tracker_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-games_tracker}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - games_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: games_tracker_backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      DB_TYPE: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-games_tracker}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - games_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../games-tracker
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:4000}
+    container_name: games_tracker_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - games_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  games_network:
+    driver: bridge
