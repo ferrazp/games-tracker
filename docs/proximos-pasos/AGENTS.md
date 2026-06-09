@@ -7,5 +7,10 @@
 - [x] Agregar logging estructurado (pino)
 - [x] Documentar migration plan BD
 - [x] Actualizar stack tecnológico: backend (Express 5, pg, sqlite3 6, dotenv 17, etc.), frontend (React 19, react-datepicker 9, web-vitals 5, testing-library latest, date-fns 4)
-- [ ] Buscador de juegos agregados (GameList) — filtrar por nombre, consola, año
-- [ ] Botón de búsqueda online (GameForm) — cuando el nombre no hace match en el catálogo local, mostrar opción de buscar en IGDB
+- [x] Buscador de juegos agregados (GameList) — filtrar por nombre, consola, año
+- [x] Botón de búsqueda online (GameForm) — cuando el nombre no hace match en el catálogo local, mostrar opción de buscar en IGDB
+- [ ] Agregar año de lanzamiento de juego tanto en game_catalog como en la búsqueda online de IGDB
+- [ ] Mejorar la UX del date picker, permitir buscar más rápido entre años
+- [ ] El botón completado se habilite al seleccionar un juego
+- [ ] Agregar imagen de las consolas para que aparezcan en la selección con el nombre como referencia
+- [ ] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
