@@ -123,7 +123,7 @@ El backend debe estar corriendo en `http://localhost:4000`.
 ## 🧪 Tests
 
 ```bash
-npm test                        # Verifica que "Registro de Juegos" se renderiza
+npm test                        # Verifica que "Games Tracker" y botón "Acceder" se renderizan
 ```
 
 ---
