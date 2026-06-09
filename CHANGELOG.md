@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Endpoint de búsqueda online en IGDB para el formulario de juegos
+
 ### Fixed
 - CORS FRONTEND_URL configurado correctamente para Docker dev (puerto 3001)
 
