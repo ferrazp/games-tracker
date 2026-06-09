@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Botón de búsqueda online en GameForm: cuando el nombre no hace match en el catálogo local, muestra opción de buscar en IGDB
 - Version badge mostrando versión del frontend y backend
 - Skill de git-flow-workflow con reglas de etiquetado, CORS fix y solo SQLite local en features
 
