@@ -30,7 +30,7 @@ feature/X       ──●──●──
 
 ## Core Principle
 
-**Feature abierta = 100% local (npm start), nada de Docker. Los tags se crean SOLO desde main. Las features NO se cierran sin aprobación del usuario. Develop deploya en Docker dev, main deploya en Docker prod.**
+**Feature abierta = 100% local (npm start), nada de Docker. Tags de release (`vX.Y.Z`) solo desde main. Tags de develop (`vX.Y.Z-dev.N`) identifican pre-releases en develop. Las features NO se cierran sin aprobación del usuario. Develop deploya en Docker dev, main deploya en Docker prod.**
 
 ## Git Commands (sin git-flow CLI)
 
@@ -71,7 +71,7 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
 
 4. Backend: `npm start` (SQLite en puerto 4000)
 5. Frontend: `npm start` (React en puerto 3000 apuntando a localhost:4000)
-6. NO crear tags desde develop
+6. Tags de release (`vX.Y.Z`) solo desde main, pero tags de pre-release (`vX.Y.Z-dev.N`) pueden crearse en develop para identificar el estado actual
 7. **No usar Docker ni PostgreSQL para nada mientras la feature esté abierta** — solo SQLite local. Las pruebas con PostgreSQL se hacen recién cuando la feature está cerrada y deployada en Docker dev.
 
 **Cierre de feature (PREVIA APROBACIÓN):**
@@ -135,6 +135,7 @@ Cada repo tiene su `CHANGELOG.md` en la raíz. Sigue https://keepachangelog.com/
 |--------|--------|
 | Feature abierta | Agregar entrada bajo `[Unreleased]` en categoría correcta. Commit: `docs(changelog): registro feature/NOMBRE` |
 | Feature cerrada | Verificar que la entrada sigue siendo precisa. Pushear develop |
+| Dev tag en develop | Crear `vX.Y.Z-dev.N` en develop. No modifica CHANGELOG. |
 | Release a main | Mover todas las entradas a `[vX.Y.Z] - fecha`. Dejar `[Unreleased]` vacío. Commit: `docs(changelog): release vX.Y.Z` |
 
 ### Categorías (orden estricto)
@@ -187,6 +188,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | Backend API | `localhost:4001` | `localhost:4000` |
 | PostgreSQL | `localhost:5433` | `localhost:5432` |
 
+## Dev Tagging Convention
+
+### Formato
+
+`vMAJOR.MINOR.PATCH-dev.N`
+
+Donde `N` es un contador entero que se incrementa por cada tag en develop.
+
+### Reglas
+
+- Los dev tags se crean en develop (NO en feature branches)
+- Reflejan la próxima versión semver que se liberará desde develop
+- `v1.1.0-dev.1` < `v1.1.0` (semver: pre-release tiene menor precedencia)
+- Al hacer release a main, se elimina el sufijo `-dev.N` y se crea `vX.Y.Z`
+- El contador `N` se reinicia a 1 cuando cambia `MAJOR.MINOR.PATCH`
+
+### Ejemplo
+
+| Estado | Tag |
+|--------|-----|
+| Develop después de v1.0.0 | `v1.1.0-dev.1` (features nuevas) |
+| Develop después de release | `v1.1.0-dev.1` (según lo que venga) |
+| Release a main | `v1.1.0` |
+
 ## Quick Reference
 
 ```
@@ -197,7 +222,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 "pasa la feature X a producción"  → main merge + tag + prod deploy
 ¿Cambia frontend y backend?       → Feature branch en AMBOS repos
 ¿Cerrar feature?                  → PREGUNTAR al usuario primero
-¿Tags?                            → SOLO desde main, NUNCA de develop
+¿Tags de release (`vX.Y.Z`)?       → SOLO desde main, NUNCA de develop
+¿Tags de develop (`vX.Y.Z-dev.N`)? → OK en develop, identifican pre-release
 ¿Feature cerrada (→ develop)?     → Docker dev (compose.dev.yml)
 ¿Release a main?                  → Tag semver + Docker prod (compose.yml)
 ```
@@ -218,7 +244,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Ambos repos (frontend + backend) llevan feature branch separada cuando el cambio los afecta
 - **Nunca cerrar una feature sin preguntar al usuario.** Esperar aprobación explícita.
-- **Los tags se crean SOLO desde main.** Nunca taguear desde develop o feature branches.
+- **Los tags de release se crean SOLO desde main.** En develop se usan tags pre-release (`vX.Y.Z-dev.N`) para identificar el estado actual.
 - Pushear feature branches regularmente para backup
 - Misma versión de tag en ambos repos siempre
 - El changelog se actualiza SOLO en los repos que el cambio afecta
