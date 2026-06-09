@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import rateLimit from 'express-rate-limit';
@@ -52,7 +51,7 @@ const HAS_TWITCH_CREDENTIALS = !!(TWITCH_CLIENT_ID && TWITCH_CLIENT_SECRET);
 const API_KEY = process.env.API_KEY || '';
 
 app.use(cors({ origin: FRONTEND_URL }));
-app.use(bodyParser.json({ limit: '5mb' }));
+app.use(express.json({ limit: '5mb' }));
 
 app.use((req, res, next) => {
   logger.debug({ method: req.method, url: req.originalUrl }, 'request');
@@ -122,9 +121,10 @@ function validateSearchQuery(query) {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_MONTH = new Date().getMonth() + 1;
 
 function validateGameData(data) {
-  const { title, console_id, year_played, image } = data;
+  const { title, console_id, year_played, month_played, year_completed, month_completed, hours_played, image } = data;
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return { valid: false, error: 'Title is required and must be a string' };
@@ -148,6 +148,34 @@ function validateGameData(data) {
     }
   }
 
+  if (month_played !== undefined && month_played !== null && month_played !== '') {
+    const m = typeof month_played === 'number' ? month_played : parseInt(month_played, 10);
+    if (isNaN(m) || !Number.isInteger(m) || m < 1 || m > 12) {
+      return { valid: false, error: 'month_played must be an integer between 1 and 12' };
+    }
+  }
+
+  if (year_completed !== undefined && year_completed !== null && year_completed !== '') {
+    const y = typeof year_completed === 'number' ? year_completed : parseInt(year_completed, 10);
+    if (isNaN(y) || !Number.isInteger(y) || y < 1950 || y > CURRENT_YEAR) {
+      return { valid: false, error: `year_completed must be an integer between 1950 and ${CURRENT_YEAR}` };
+    }
+  }
+
+  if (month_completed !== undefined && month_completed !== null && month_completed !== '') {
+    const m = typeof month_completed === 'number' ? month_completed : parseInt(month_completed, 10);
+    if (isNaN(m) || !Number.isInteger(m) || m < 1 || m > 12) {
+      return { valid: false, error: 'month_completed must be an integer between 1 and 12' };
+    }
+  }
+
+  if (hours_played !== undefined && hours_played !== null && hours_played !== '') {
+    const h = typeof hours_played === 'number' ? hours_played : parseFloat(hours_played);
+    if (isNaN(h) || h < 0) {
+      return { valid: false, error: 'hours_played must be a positive number' };
+    }
+  }
+
   if (image !== undefined && image !== null && image !== '') {
     if (typeof image !== 'string') {
       return { valid: false, error: 'image must be a string' };
@@ -160,6 +188,10 @@ function validateGameData(data) {
 function parseGameData(data) {
   const rawConsoleId = data.console_id;
   const rawYear = data.year_played;
+  const rawMonth = data.month_played;
+  const rawYearCompleted = data.year_completed;
+  const rawMonthCompleted = data.month_completed;
+  const rawHours = data.hours_played;
 
   return {
     title: data.title.trim(),
@@ -167,6 +199,14 @@ function parseGameData(data) {
       ? parseInt(rawConsoleId, 10) : null,
     year_played: rawYear !== undefined && rawYear !== null && rawYear !== ''
       ? parseInt(rawYear, 10) : null,
+    month_played: rawMonth !== undefined && rawMonth !== null && rawMonth !== ''
+      ? parseInt(rawMonth, 10) : null,
+    year_completed: rawYearCompleted !== undefined && rawYearCompleted !== null && rawYearCompleted !== ''
+      ? parseInt(rawYearCompleted, 10) : null,
+    month_completed: rawMonthCompleted !== undefined && rawMonthCompleted !== null && rawMonthCompleted !== ''
+      ? parseInt(rawMonthCompleted, 10) : null,
+    hours_played: rawHours !== undefined && rawHours !== null && rawHours !== ''
+      ? parseFloat(rawHours) : null,
     completed: data.completed === true || data.completed === 'true',
     image: data.image || null
   };
@@ -180,7 +220,7 @@ function parseId(raw) {
 async function fetchGameById(db, id) {
   if (DB_TYPE === 'sqlite') {
     const result = await db.query(
-      `SELECT g.id, g.title, g.year_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at
+      `SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at
        FROM games g
        LEFT JOIN consoles c ON g.console_id = c.id
        WHERE g.id = ?`,
@@ -502,7 +542,7 @@ app.get('/games', async (req, res) => {
     const orderClause = isSQLite ? 'ORDER BY g.created_at DESC' : 'ORDER BY g.created_at DESC NULLS LAST';
 
     const selectSQL = `
-      SELECT g.id, g.title, g.year_played, g.completed, g.image,
+      SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image,
              c.name as console_name, c.id as console_id,
              g.created_at, g.updated_at
       FROM games g
@@ -592,10 +632,10 @@ app.post('/games', requireJWT, async (req, res) => {
     }
 
     const insertSQL = DB_TYPE === 'sqlite'
-      ? 'INSERT INTO games (title, console_id, year_played, completed, image) VALUES (?, ?, ?, ?, ?)'
-      : 'INSERT INTO games (title, console_id, year_played, completed, image) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+      ? 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      : 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id';
 
-    const params = [data.title, data.console_id, data.year_played, data.completed, data.image];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image];
     const result = await db.query(insertSQL, params);
 
     const newId = DB_TYPE === 'sqlite' ? result.lastID : result.rows[0].id;
@@ -643,10 +683,10 @@ app.put('/games/:id', requireJWT, async (req, res) => {
     }
 
     const updateSQL = DB_TYPE === 'sqlite'
-      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, completed = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, completed = $4, image = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6';
+      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, updated_at = CURRENT_TIMESTAMP WHERE id = $10';
 
-    const params = [data.title, data.console_id, data.year_played, data.completed, data.image, id];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, id];
     const result = await db.query(updateSQL, params);
 
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
