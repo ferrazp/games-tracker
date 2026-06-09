@@ -50,6 +50,24 @@ const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const HAS_TWITCH_CREDENTIALS = !!(TWITCH_CLIENT_ID && TWITCH_CLIENT_SECRET);
 const API_KEY = process.env.API_KEY || '';
 
+const IGDB_PLATFORM_TO_CONSOLE = {
+  18: 'Family Game',
+  19: 'Super Nintendo',
+  4: 'Nintendo 64',
+  23: 'Dreamcast',
+  7: 'PlayStation 1',
+  8: 'PlayStation 2',
+  21: 'GameCube',
+  9: 'PlayStation 3',
+  38: 'PlayStation Portable (PSP)',
+  20: 'Nintendo DS',
+  5: 'Nintendo Wii',
+  48: 'PlayStation 4',
+  130: 'Nintendo Switch',
+  167: 'PlayStation 5',
+  6: 'PC'
+};
+
 app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json({ limit: '5mb' }));
 
@@ -114,8 +132,8 @@ function validateSearchQuery(query) {
   if (!query || typeof query !== 'string') {
     return { valid: false, error: 'Query must be a non-empty string' };
   }
-  if (query.length < 3 || query.length > 100) {
-    return { valid: false, error: 'Query must be between 3 and 100 characters' };
+  if (query.length < 1 || query.length > 100) {
+    return { valid: false, error: 'Query must be between 1 and 100 characters' };
   }
   return { valid: true };
 }
@@ -485,7 +503,7 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: `fields name,cover.url; search "${sanitizedQuery}"; limit 10;`
+      body: `fields name,cover.url,platforms.name; search "${sanitizedQuery}"; limit 10;`
     });
 
     if (!igdbResponse.ok) {
@@ -493,11 +511,17 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
     }
 
     const data = await igdbResponse.json();
-    const results = (Array.isArray(data) ? data : []).map(g => ({
-      id: g.id,
-      name: g.name,
-      cover: g.cover?.url ? { url: g.cover.url.replace('/t_thumb/', '/t_cover_big/') } : null
-    }));
+    const results = (Array.isArray(data) ? data : []).map(g => {
+      const platform = Array.isArray(g.platforms) ? g.platforms[0] : null;
+      const mappedName = platform ? IGDB_PLATFORM_TO_CONSOLE[platform.id] : null;
+      return {
+        id: g.id,
+        name: g.name,
+        cover: g.cover?.url ? { url: g.cover.url.replace('/t_thumb/', '/t_cover_big/') } : null,
+        console_name: mappedName,
+        platform_name: platform?.name || null
+      };
+    });
     res.json({ results, source: 'online' });
   } catch (error) {
     logger.error({ err: error }, 'Error searching IGDB');
@@ -612,14 +636,6 @@ app.post('/games', requireJWT, async (req, res) => {
       if (data.year_played !== null && launchYear !== null && data.year_played < launchYear) {
         return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the console launch year (${launchYear})` });
       }
-    }
-
-    const catQuery = DB_TYPE === 'sqlite'
-      ? 'SELECT 1 FROM game_catalog WHERE title = ?'
-      : 'SELECT 1 FROM game_catalog WHERE title = $1';
-    const catResult = await db.query(catQuery, [data.title]);
-    if (catResult.rows.length === 0) {
-      return res.status(400).json({ error: '\"' + data.title + '\" is not in the game catalog' });
     }
 
     const dupQuery = DB_TYPE === 'sqlite'
