@@ -87,7 +87,12 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
     cd F:\projects\developments\games-tracker
     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop
     ```
-13. Deployar en dev: `docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build`
+13. Deployar en dev:
+    ```powershell
+    $env:DB_PORT='5433'; $env:API_PORT='4001'; $env:FRONTEND_PORT='3001'; $env:FRONTEND_URL='http://localhost:3001'
+    docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build
+    ```
+    > El `.env` tiene `DB_PORT=5432` y `FRONTEND_URL=http://localhost:3000`, por eso se pasan inline.
 14. Verificar: http://localhost:3001 (frontend) y http://localhost:4001/api/health (backend)
 
 ### "pasa la feature X al main de prod" / "pasá X a producción"
@@ -170,7 +175,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Ambiente | Archivo | Project Name | Comando |
 |----------|---------|-------------|---------|
-| Dev | `docker-compose.dev.yml` | `games_tracker_dev` | `docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build` |
+| Dev | `docker-compose.dev.yml` | `games_tracker_dev` | `$env:DB_PORT='5433'; $env:API_PORT='4001'; $env:FRONTEND_PORT='3001'; $env:FRONTEND_URL='http://localhost:3001'; docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build` |
 | Prod | `docker-compose.yml` | `games_tracker` | `docker compose up -d --build` |
 
 ### Puertos
