@@ -86,6 +86,30 @@ class SQLiteClient {
       });
     });
 
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE games ADD COLUMN month_played INTEGER", (err) => {
+        resolve();
+      });
+    });
+
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE games ADD COLUMN year_completed INTEGER", (err) => {
+        resolve();
+      });
+    });
+
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE games ADD COLUMN month_completed INTEGER", (err) => {
+        resolve();
+      });
+    });
+
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE games ADD COLUMN hours_played REAL", (err) => {
+        resolve();
+      });
+    });
+
     const consoles = [
       { name: 'Family Game', launchYear: 1983 },
       { name: 'Super Nintendo', launchYear: 1990 },
@@ -239,6 +263,27 @@ class PostgreSQLClient {
 
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS launch_year INTEGER`);
 
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS month_played INTEGER`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS year_completed INTEGER`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS month_completed INTEGER`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS hours_played NUMERIC(8,1)`);
+
+      await this.pool.query(`DROP VIEW IF EXISTS games_view CASCADE`);
+
+      await this.pool.query(`CREATE VIEW games_view AS
+        SELECT
+            g.id, g.title,
+            g.year_played, g.month_played,
+            g.year_completed, g.month_completed,
+            g.hours_played,
+            g.completed, g.image,
+            c.name as console_name, c.id as console_id,
+            g.created_at, g.updated_at
+        FROM games g
+        LEFT JOIN consoles c ON g.console_id = c.id
+        ORDER BY g.created_at DESC
+      `);
+
       const pgSeed = [
         { name: 'Family Game', launchYear: 1983 },
         { name: 'Super Nintendo', launchYear: 1990 },
@@ -265,16 +310,14 @@ class PostgreSQLClient {
 
       await this.pool.query(`
         CREATE OR REPLACE VIEW games_view AS
-        SELECT 
-          g.id,
-          g.title,
-          g.year_played,
-          g.completed,
-          g.image,
-          c.name as console_name,
-          c.id as console_id,
-          g.created_at,
-          g.updated_at
+        SELECT
+            g.id, g.title,
+            g.year_played, g.month_played,
+            g.year_completed, g.month_completed,
+            g.hours_played,
+            g.completed, g.image,
+            c.name as console_name, c.id as console_id,
+            g.created_at, g.updated_at
         FROM games g
         LEFT JOIN consoles c ON g.console_id = c.id
         ORDER BY g.created_at DESC

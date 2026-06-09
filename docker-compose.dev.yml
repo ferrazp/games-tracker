@@ -1,15 +1,15 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: games_tracker_db
+    container_name: games_tracker_dev_db
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-games_tracker}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_dev_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
@@ -17,16 +17,16 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - games_network
+      - games_dev_network
     restart: unless-stopped
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: games_tracker_backend
+    container_name: games_tracker_dev_backend
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
       PORT: 4000
       DB_TYPE: postgresql
       DB_HOST: postgres
@@ -38,12 +38,12 @@ services:
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
-      - "${API_PORT:-4000}:4000"
+      - "${API_PORT:-4001}:4000"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - games_network
+      - games_dev_network
     restart: unless-stopped
 
   frontend:
@@ -51,21 +51,21 @@ services:
       context: ../games-tracker
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:4000}
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:4001}
         REACT_APP_VERSION: ${REACT_APP_VERSION:-1.0.0}
-    container_name: games_tracker_frontend
+    container_name: games_tracker_dev_frontend
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "${FRONTEND_PORT:-3001}:80"
     depends_on:
       - backend
     networks:
-      - games_network
+      - games_dev_network
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_dev_data:
     driver: local
 
 networks:
-  games_network:
+  games_dev_network:
     driver: bridge
