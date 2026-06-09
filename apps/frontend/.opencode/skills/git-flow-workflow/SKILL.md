@@ -30,7 +30,7 @@ feature/X       ──●──●──
 
 ## Core Principle
 
-**Feature branches trabajan local, develop deploya en Docker dev, main deploya en Docker prod. Changelog y semver se actualizan en cada etapa. Nunca deployar Docker mientras una feature esté abierta.**
+**Los tags se crean SOLO desde main. Las features NO se cierran sin aprobación del usuario. Feature branches trabajan local, develop deploya en Docker dev, main deploya en Docker prod. Changelog y semver se actualizan en cada etapa.**
 
 ## Git Commands (sin git-flow CLI)
 
@@ -39,9 +39,9 @@ feature/X       ──●──●──
 | Iniciar feature | `git checkout develop && git pull && git checkout -b feature/NOMBRE develop` |
 | Commit | `git add . && git commit -m "tipo(alcance): mensaje"` |
 | Push feature | `git push origin feature/NOMBRE` |
-| Cerrar feature | `git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE` |
+| Cerrar feature (solo con aprobación) | `git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE` |
 | Push develop | `git push origin develop` |
-| Release a main | `git checkout main && git merge --no-ff develop && git tag vNUEVA_VERSION && git push origin main --tags` |
+| Release a main (ÚNICO lugar para tags) | `git checkout main && git merge --no-ff develop && git tag vNUEVA_VERSION && git push origin main --tags` |
 
 Todos los merges usan `--no-ff` para preservar historial de branches.
 
@@ -67,26 +67,28 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
    ```
 3. Actualizar CHANGELOG.md: agregar entrada descriptiva bajo `[Unreleased]` en la categoría correcta (Added, Changed, Fixed, etc.) en los repos que corresponda. Si no existe, crearlo con template estándar. Commit: `docs(changelog): registro feature/NOMBRE`
 
-**Desarrollo (100% local, sin Docker):**
+**Desarrollo (local o Docker dev según corresponda):**
 
-4. Backend: `npm start` (SQLite en puerto 4000)
-5. Frontend: `npm start` (React en puerto 3000 apuntando a localhost:4000)
-6. NO deployar Docker mientras la feature esté abierta
+4. Si es prueba rápida: `npm start` local (backen puerto 4000, frontend puerto 3000)
+5. Si necesita validación con PostgreSQL: usar Docker dev existente
+6. NO crear tags desde develop — los tags son SOLO de main
 
-**Cierre de feature:**
+**Cierre de feature (PREVIA APROBACIÓN):**
 
 7. Verificar que la entrada en CHANGELOG.md sigue siendo precisa; actualizar si hace falta
 8. Commit + push en ambos repos
-9. Marcar el item como `- [x]` en `docs/proximos-pasos/AGENTS.md`
-10. Cerrar feature:
+9. **PREGUNTAR AL USUARIO:** "¿Aprobás cerrar la feature NOMBRE (merge a develop + deploy dev)?"
+10. **NO cerrar hasta recibir aprobación explícita.** Si el usuario dice que no, detenerse.
+11. Marcar el item como `- [x]` en `docs/proximos-pasos/AGENTS.md`
+12. Cerrar feature:
     ```bash
     cd F:\projects\developments\games-tracker-backend
     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop
     cd F:\projects\developments\games-tracker
     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop
     ```
-11. Deployar en dev: `docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build`
-12. Verificar: http://localhost:3001 (frontend) y http://localhost:4001/api/health (backend)
+13. Deployar en dev: `docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build`
+14. Verificar: http://localhost:3001 (frontend) y http://localhost:4001/api/health (backend)
 
 ### "pasa la feature X al main de prod" / "pasá X a producción"
 
@@ -185,10 +187,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ¿Qué quiere hacer?                → Acción
 ─────────────────────────────────────────────────────────────────
 "agrega al proximo paso: X"       → Solo editar AGENTS.md
-"implementar el próximo paso"     → feature/ + local + dev deploy
+"implementar el próximo paso"     → feature/ + preguntar antes de cerrar
 "pasa la feature X a producción"  → main merge + tag + prod deploy
 ¿Cambia frontend y backend?       → Feature branch en AMBOS repos
-¿Feature abierta?                 → NO Docker, npm start local
+¿Cerrar feature?                  → PREGUNTAR al usuario primero
+¿Tags?                            → SOLO desde main, NUNCA de develop
 ¿Feature cerrada (→ develop)?     → Docker dev (compose.dev.yml)
 ¿Release a main?                  → Tag semver + Docker prod (compose.yml)
 ```
@@ -202,12 +205,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | "No actualizo el changelog, me voy a acordar" | No te vas a acordar | Actualizar al abrir la feature |
 | "Esto es un fix chico, no merece versión" | Todo merge a develop merece entrada en changelog | Siempre registrar |
 | "Hago el tag y después actualizo el changelog" | El tag debe reflejar el changelog | Changelog ANTES del tag |
+| "Cierro la feature sin preguntar, total ya está" | El usuario puede querer cambios antes del merge | Preguntar siempre |
 | "Olvidé pushear la feature branch" | Si se pierde el equipo, se pierde el código | Pushear regularmente |
 
 ## Important Notes
 
 - Ambos repos (frontend + backend) llevan feature branch separada cuando el cambio los afecta
-- Nunca deployar Docker mientras una feature branch esté abierta
+- **Nunca cerrar una feature sin preguntar al usuario.** Esperar aprobación explícita.
+- **Los tags se crean SOLO desde main.** Nunca taguear desde develop o feature branches.
 - Pushear feature branches regularmente para backup
 - Misma versión de tag en ambos repos siempre
 - El changelog se actualiza SOLO en los repos que el cambio afecta
