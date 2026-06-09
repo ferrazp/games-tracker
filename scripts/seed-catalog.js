@@ -114,6 +114,8 @@ async function seedCatalog() {
   }
 
   const withImages = process.argv.includes('--download-images');
+  const limitArg = process.argv.find(a => a.startsWith('--limit='));
+  const GAMES_PER_PLATFORM = limitArg ? parseInt(limitArg.split('=')[1], 10) : 100;
 
   await initializeDatabase();
   const db = getDatabase();
@@ -133,21 +135,11 @@ async function seedCatalog() {
   for (const [consoleName, platformId] of Object.entries(PLATFORM_MAP)) {
     console.log(` ${consoleName} (platform ${platformId})...`);
 
-    let allGames = [];
+    const { games, rawCount } = await fetchTopGames(platformId, accessToken, 0, GAMES_PER_PLATFORM);
+    console.log(`   Found ${rawCount} games on IGDB`);
 
-    const { games: batch1, rawCount: raw1 } = await fetchTopGames(platformId, accessToken, 0, 500);
-    allGames = allGames.concat(batch1);
-
-    if (raw1 === 500) {
-      await sleep(300);
-      const { games: batch2 } = await fetchTopGames(platformId, accessToken, 500, 500);
-      allGames = allGames.concat(batch2);
-    }
-
-    console.log(`   Found ${allGames.length} games on IGDB`);
-
-    const newGames = allGames.filter(g => !existingIds.has(g.id));
-    console.log(`   ${newGames.length} new, ${allGames.length - newGames.length} already in catalog`);
+    const newGames = games.filter(g => !existingIds.has(g.id));
+    console.log(`   ${newGames.length} new, ${games.length - newGames.length} already in catalog`);
 
     if (newGames.length > 0) {
       if (withImages) {
