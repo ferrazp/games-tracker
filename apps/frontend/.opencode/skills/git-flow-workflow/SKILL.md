@@ -30,7 +30,7 @@ feature/X       ──●──●──
 
 ## Core Principle
 
-**Los tags se crean SOLO desde main. Las features NO se cierran sin aprobación del usuario. Feature branches trabajan local, develop deploya en Docker dev, main deploya en Docker prod. Changelog y semver se actualizan en cada etapa.**
+**Feature abierta = 100% local (npm start), nada de Docker. Los tags se crean SOLO desde main. Las features NO se cierran sin aprobación del usuario. Develop deploya en Docker dev, main deploya en Docker prod.**
 
 ## Git Commands (sin git-flow CLI)
 
@@ -67,11 +67,12 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
    ```
 3. Actualizar CHANGELOG.md: agregar entrada descriptiva bajo `[Unreleased]` en la categoría correcta (Added, Changed, Fixed, etc.) en los repos que corresponda. Si no existe, crearlo con template estándar. Commit: `docs(changelog): registro feature/NOMBRE`
 
-**Desarrollo (local o Docker dev según corresponda):**
+**Desarrollo (100% local, sin Docker):**
 
-4. Si es prueba rápida: `npm start` local (backen puerto 4000, frontend puerto 3000)
-5. Si necesita validación con PostgreSQL: usar Docker dev existente
-6. NO crear tags desde develop — los tags son SOLO de main
+4. Backend: `npm start` (SQLite en puerto 4000)
+5. Frontend: `npm start` (React en puerto 3000 apuntando a localhost:4000)
+6. NO crear tags desde develop
+7. **No usar Docker ni PostgreSQL para nada mientras la feature esté abierta** — solo SQLite local. Las pruebas con PostgreSQL se hacen recién cuando la feature está cerrada y deployada en Docker dev.
 
 **Cierre de feature (PREVIA APROBACIÓN):**
 
