@@ -39,7 +39,7 @@ feature/X       ──●──●──
 | Iniciar feature | `git checkout develop && git pull && git checkout -b feature/NOMBRE develop` |
 | Commit | `git add . && git commit -m "tipo(alcance): mensaje"` |
 | Push feature | `git push origin feature/NOMBRE` |
-| Cerrar feature (solo con aprobación) | `git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE` |
+| Cerrar feature (solo con aprobación) | `git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE` |
 | Push develop | `git push origin develop` |
 | Release a main (ÚNICO lugar para tags) | `git checkout main && git merge --no-ff develop && git tag vNUEVA_VERSION && git push origin main --tags` |
 
@@ -81,13 +81,13 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
 9. **PREGUNTAR AL USUARIO:** "¿Aprobás cerrar la feature NOMBRE (merge a develop + deploy dev)?"
 10. **NO cerrar hasta recibir aprobación explícita.** Si el usuario dice que no, detenerse.
 11. Marcar el item como `- [x]` en `docs/proximos-pasos/AGENTS.md`
-12. Cerrar feature:
-    ```bash
-    cd F:\projects\developments\games-tracker-backend
-    git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop
-    cd F:\projects\developments\games-tracker
-    git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop
-    ```
+ 12. Cerrar feature:
+     ```bash
+     cd F:\projects\developments\games-tracker-backend
+     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE
+     cd F:\projects\developments\games-tracker
+     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE
+     ```
 13. Deployar en dev:
     ```powershell
     $env:DB_PORT='5433'; $env:API_PORT='4001'; $env:FRONTEND_PORT='3001'; $env:FRONTEND_URL='http://localhost:3001'
