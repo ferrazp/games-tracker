@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
 
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
 function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -24,6 +26,10 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
       title: game.title,
       console_id: game.console_id,
       year_played: game.year_played || '',
+      month_played: game.month_played || '',
+      year_completed: game.year_completed || '',
+      month_completed: game.month_completed || '',
+      hours_played: game.hours_played || '',
       completed: game.completed,
       image: game.image || ''
     });
@@ -39,7 +45,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     setEditForm(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
-      ...(name === 'console_id' ? { year_played: '' } : {})
+      ...(name === 'console_id' ? { year_played: '', month_played: '' } : {})
     }));
   };
 
@@ -61,19 +67,25 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     setEditForm(prev => ({ ...prev, image: '' }));
   };
 
+  const buildEditPayload = () => ({
+    title: editForm.title,
+    console_id: editForm.console_id ? parseInt(editForm.console_id, 10) : null,
+    year_played: editForm.year_played ? parseInt(editForm.year_played, 10) : null,
+    month_played: editForm.month_played ? parseInt(editForm.month_played, 10) : null,
+    year_completed: editForm.year_completed ? parseInt(editForm.year_completed, 10) : null,
+    month_completed: editForm.month_completed ? parseInt(editForm.month_completed, 10) : null,
+    hours_played: editForm.hours_played ? parseFloat(editForm.hours_played) : null,
+    completed: editForm.completed,
+    image: editForm.image || null
+  });
+
   const saveEdit = async (id) => {
     try {
       setSaving(id);
       const response = await fetch(`${API_URL}/games/${id}`, {
         method: 'PUT',
         headers: getHeaders(),
-        body: JSON.stringify({
-          title: editForm.title,
-          console_id: editForm.console_id ? parseInt(editForm.console_id, 10) : null,
-          year_played: editForm.year_played ? parseInt(editForm.year_played, 10) : null,
-          completed: editForm.completed,
-          image: editForm.image || null
-        })
+        body: JSON.stringify(buildEditPayload())
       });
       if (!response.ok) throw new Error('Error al actualizar');
       setEditingId(null);
@@ -98,6 +110,24 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     } finally {
       setDeleting(null);
     }
+  };
+
+  const formatPlayed = (g) => {
+    if (g.month_played && g.year_played) return `${MONTHS[g.month_played - 1]} ${g.year_played}`;
+    if (g.year_played) return String(g.year_played);
+    return '—';
+  };
+
+  const formatCompleted = (g) => {
+    if (g.month_completed && g.year_completed) return `${MONTHS[g.month_completed - 1]} ${g.year_completed}`;
+    if (g.year_completed) return String(g.year_completed);
+    return null;
+  };
+
+  const formatHours = (g) => {
+    if (g.hours_played == null) return null;
+    const h = Number(g.hours_played);
+    return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
   };
 
   if (loading) {
@@ -172,11 +202,71 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                  <input name="year_played" type="number" value={editForm.year_played} onChange={handleEditChange} placeholder={editForm.console_id ? "Año" : "Primero consola"} disabled={!editForm.console_id} min={(() => { const c = consoles.find(c => c.id === parseInt(editForm.console_id)); return c?.launch_year || 1950; })()} max={new Date().getFullYear()} className="game-edit-year" />
+                  <input
+                    name="year_played"
+                    type="number"
+                    value={editForm.year_played}
+                    onChange={handleEditChange}
+                    placeholder={editForm.console_id ? "Año" : "Primero consola"}
+                    disabled={!editForm.console_id}
+                    min={(() => { const c = consoles.find(c => c.id === parseInt(editForm.console_id)); return c?.launch_year || 1950; })()}
+                    max={new Date().getFullYear()}
+                    className="game-edit-year"
+                  />
+                  <input
+                    name="month_played"
+                    type="number"
+                    value={editForm.month_played}
+                    onChange={handleEditChange}
+                    placeholder="Mes"
+                    disabled={!editForm.console_id}
+                    min="1"
+                    max="12"
+                    className="game-edit-year"
+                  />
+                </div>
+                <div className="game-edit-row">
                   <label className="game-edit-completed">
                     <input name="completed" type="checkbox" checked={editForm.completed} onChange={handleEditChange} />
                     Completado
                   </label>
+                  {editForm.completed && (
+                    <>
+                      <input
+                        name="year_completed"
+                        type="number"
+                        value={editForm.year_completed}
+                        onChange={handleEditChange}
+                        placeholder="Año fin"
+                        min="1950"
+                        max={new Date().getFullYear()}
+                        className="game-edit-year"
+                      />
+                      <input
+                        name="month_completed"
+                        type="number"
+                        value={editForm.month_completed}
+                        onChange={handleEditChange}
+                        placeholder="Mes"
+                        min="1"
+                        max="12"
+                        className="game-edit-year"
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="game-edit-row">
+                  <input
+                    name="hours_played"
+                    type="number"
+                    value={editForm.hours_played}
+                    onChange={handleEditChange}
+                    placeholder="Horas (opcional)"
+                    min="0"
+                    step="0.1"
+                    className="game-edit-year"
+                    style={{ width: '140px' }}
+                  />
                 </div>
                 <div className="game-actions">
                   <button onClick={() => saveEdit(game.id)} disabled={saving === game.id} className="btn btn-save">
@@ -205,10 +295,16 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
                 <h3>{game.title}</h3>
                 <p>{game.console_name || '—'}</p>
                 <div className="game-meta">
-                  <span>{game.year_played || '?'}</span>
+                  <span>Jugado: {formatPlayed(game)}</span>
                   <span className={`game-status ${game.completed ? 'completed' : 'pending'}`}>
                     {game.completed ? 'Completado' : 'Pendiente'}
                   </span>
+                  {game.completed && formatCompleted(game) && (
+                    <span className="game-meta-completed">{formatCompleted(game)}</span>
+                  )}
+                  {formatHours(game) && (
+                    <span className="game-meta-hours">{formatHours(game)}</span>
+                  )}
                 </div>
               </div>
               {isAuthenticated && (

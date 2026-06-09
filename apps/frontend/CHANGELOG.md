@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Actualizadas todas las dependencias a sus últimas versiones estables (React 19, react-datepicker 9, web-vitals 5, testing-library, date-fns 4, etc.)
 
+### Fixed
+- Test de App actualizado para login screen (pre-existing mismatch)
+
 ## [v1.0.0] - 2026-06-08
 ### Added
 - CRUD completo de videojuegos

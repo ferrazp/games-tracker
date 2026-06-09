@@ -533,6 +533,16 @@ form > button[type="submit"]:disabled {
   color: rgba(255, 255, 255, 0.35);
 }
 
+.game-meta-completed {
+  font-size: 11px;
+  color: rgba(81, 207, 102, 0.6);
+}
+
+.game-meta-hours {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .game-status {
   padding: 2px 8px;
   border-radius: 4px;

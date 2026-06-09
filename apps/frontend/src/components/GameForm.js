@@ -10,8 +10,10 @@ function GameForm({ onGameAdded, getHeaders }) {
   const [game, setGame] = useState({
     title: '',
     consoleId: '',
-    yearPlayed: null,
+    playedAt: null,
     completed: false,
+    completedAt: null,
+    hoursPlayed: '',
     image: ''
   });
   const [consoles, setConsoles] = useState([]);
@@ -48,7 +50,7 @@ function GameForm({ onGameAdded, getHeaders }) {
 
   const handleConsoleChange = (e) => {
     const value = e.target.value;
-    setGame(prev => ({ ...prev, consoleId: value, yearPlayed: null }));
+    setGame(prev => ({ ...prev, consoleId: value, playedAt: null }));
     if (game.title.length > 2) {
       triggerSearch(game.title, value);
     }
@@ -163,12 +165,6 @@ function GameForm({ onGameAdded, getHeaders }) {
     setGame(prev => ({ ...prev, image: '' }));
   };
 
-  const handleYearChange = (date) => {
-    if (date) {
-      setGame(prev => ({ ...prev, yearPlayed: date.getFullYear() }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -187,7 +183,11 @@ function GameForm({ onGameAdded, getHeaders }) {
         body: JSON.stringify({
           title: game.title,
           console_id: game.consoleId,
-          year_played: game.yearPlayed,
+          year_played: game.playedAt ? game.playedAt.getFullYear() : null,
+          month_played: game.playedAt ? game.playedAt.getMonth() + 1 : null,
+          year_completed: game.completedAt ? game.completedAt.getFullYear() : null,
+          month_completed: game.completedAt ? game.completedAt.getMonth() + 1 : null,
+          hours_played: game.hoursPlayed !== '' ? parseFloat(game.hoursPlayed) : null,
           completed: game.completed,
           image: game.image
         }),
@@ -200,8 +200,10 @@ function GameForm({ onGameAdded, getHeaders }) {
       setGame({
         title: '',
         consoleId: '',
-        yearPlayed: null,
+        playedAt: null,
         completed: false,
+        completedAt: null,
+        hoursPlayed: '',
         image: ''
       });
       setTitleLocked(false);
@@ -310,19 +312,19 @@ function GameForm({ onGameAdded, getHeaders }) {
 
       <div className="game-form-fields">
         <div className="game-form-field">
-          <label htmlFor="yearPlayed">Año jugado</label>
+          <label htmlFor="playedAt">Fecha jugado</label>
           <DatePicker
-            selected={game.yearPlayed ? new Date(game.yearPlayed, 0, 1) : null}
-            onChange={handleYearChange}
-            showYearPicker
-            dateFormat="yyyy"
-            placeholderText={game.consoleId ? "Seleccioná un año" : "Primero seleccioná una consola"}
+            selected={game.playedAt}
+            onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
+            showMonthYearPicker
+            dateFormat="MM/yyyy"
+            placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
             disabled={!game.consoleId}
             minDate={(() => {
               const c = consoles.find(c => c.id === parseInt(game.consoleId));
               return c?.launch_year ? new Date(c.launch_year, 0, 1) : undefined;
             })()}
-            maxDate={new Date(CURRENT_YEAR, 0, 1)}
+            maxDate={new Date(CURRENT_YEAR, 11, 31)}
           />
         </div>
 
@@ -331,6 +333,36 @@ function GameForm({ onGameAdded, getHeaders }) {
           <input type="checkbox" id="completed" name="completed" checked={game.completed} onChange={handleChange} />
         </div>
       </div>
+
+      {game.completed && (
+        <div className="game-form-fields">
+          <div className="game-form-field">
+            <label htmlFor="completedAt">Fecha completado</label>
+            <DatePicker
+              selected={game.completedAt}
+              onChange={(date) => setGame(prev => ({ ...prev, completedAt: date }))}
+              showMonthYearPicker
+              dateFormat="MM/yyyy"
+              placeholderText="Mes y año"
+              maxDate={new Date(CURRENT_YEAR, 11, 31)}
+            />
+          </div>
+
+          <div className="game-form-field">
+            <label htmlFor="hoursPlayed">Horas jugadas</label>
+            <input
+              type="number"
+              id="hoursPlayed"
+              name="hoursPlayed"
+              value={game.hoursPlayed}
+              onChange={handleChange}
+              placeholder="Opcional"
+              min="0"
+              step="0.1"
+            />
+          </div>
+        </div>
+      )}
 
       <button type="submit" className="game-form-submit" disabled={submitting || !titleLocked}>
         {submitting ? 'Guardando...' : titleLocked ? 'Agregar juego' : 'Seleccioná un juego del catálogo'}
