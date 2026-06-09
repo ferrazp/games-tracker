@@ -37,9 +37,13 @@ games-tracker/
 
 ## 🚀 Quick Start
 
-```bash
+```powershell
 cd F:\projects\developments\games-tracker
 npm start                       # Inicia en http://localhost:3000
+
+# Para lanzar en ventana separada (PowerShell 7):
+Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker-backend" -ArgumentList "-NoExit", "-Command", "npm start"
+Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker" -ArgumentList "-NoExit", "-Command", "npm start"
 ```
 
 El backend debe estar corriendo en `http://localhost:4000`.

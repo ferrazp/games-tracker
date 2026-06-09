@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Botón de búsqueda online en GameForm: cuando el nombre no hace match en el catálogo local, muestra opción de buscar en IGDB
+- Búsqueda online en IGDB desde GameForm: cuando la búsqueda local no encuentra resultados, botón para buscar en IGDB con resultados seleccionables
+- Auto-creación de consolas: si un juego online pertenece a una plataforma que no está en la DB, se crea automáticamente al seleccionarlo
 - Version badge mostrando versión del frontend y backend
 - Skill de git-flow-workflow con reglas de etiquetado, CORS fix y solo SQLite local en features
 

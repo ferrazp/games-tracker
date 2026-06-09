@@ -21,6 +21,9 @@ function GameForm({ onGameAdded, getHeaders }) {
   const [titleLocked, setTitleLocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [onlineAvailable, setOnlineAvailable] = useState(false);
+  const [onlineSearching, setOnlineSearching] = useState(false);
+  const [onlineResults, setOnlineResults] = useState([]);
 
   useEffect(() => {
     const fetchConsoles = async () => {
@@ -51,7 +54,7 @@ function GameForm({ onGameAdded, getHeaders }) {
   const handleConsoleChange = (e) => {
     const value = e.target.value;
     setGame(prev => ({ ...prev, consoleId: value, playedAt: null }));
-    if (game.title.length > 2) {
+    if (game.title.length > 0) {
       triggerSearch(game.title, value);
     }
   };
@@ -71,10 +74,12 @@ function GameForm({ onGameAdded, getHeaders }) {
         });
         if (!response.ok) {
           setSearchResults([]);
+          setOnlineAvailable(false);
           return;
         }
         const data = await response.json();
         setSearchResults(data.results || []);
+        setOnlineAvailable(data.online_available || false);
       } catch (err) {
         setSearchResults([]);
       }
@@ -86,11 +91,36 @@ function GameForm({ onGameAdded, getHeaders }) {
     setGame(prev => ({ ...prev, title: value }));
     if (titleLocked) setTitleLocked(false);
 
-    if (value.length > 2) {
+    if (value.length > 0) {
       triggerSearch(value, game.consoleId);
+      setOnlineResults([]);
     } else {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
       setSearchResults([]);
+      setOnlineAvailable(false);
+      setOnlineResults([]);
+    }
+  };
+
+  const handleOnlineSearch = async () => {
+    setOnlineSearching(true);
+    setFeedback(null);
+    try {
+      const response = await fetch(`${API_URL}/search/online`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: game.title }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al buscar en IGDB');
+      }
+      const data = await response.json();
+      setOnlineResults(data.results || []);
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message });
+    } finally {
+      setOnlineSearching(false);
     }
   };
 
@@ -122,21 +152,41 @@ function GameForm({ onGameAdded, getHeaders }) {
       }
     }
 
+    let consoleId = game.consoleId;
+    if (!consoleId && selectedGame.console_name) {
+      const match = consoles.find(c =>
+        c.name.toLowerCase() === selectedGame.console_name.toLowerCase()
+      );
+      if (match) consoleId = match.id.toString();
+    }
+
+    if (!consoleId && selectedGame.platform_name) {
+      try {
+        const response = await fetch(`${API_URL}/consoles`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ name: selectedGame.platform_name }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          consoleId = data.console.id.toString();
+          setConsoles(prev => [...prev, data.console]);
+        }
+      } catch (err) {
+        // ignore — user can select manually
+      }
+    }
+
     setGame(prev => ({
       ...prev,
       title: selectedGame.name,
-      consoleId: prev.consoleId
-        ? prev.consoleId
-        : (() => {
-            const match = consoles.find(c =>
-              c.name.toLowerCase() === (selectedGame.console_name || '').toLowerCase()
-            );
-            return match ? match.id.toString() : prev.consoleId;
-          })(),
+      consoleId,
       image
     }));
     setTitleLocked(true);
     setSearchResults([]);
+    setOnlineResults([]);
+    setOnlineAvailable(false);
   };
 
   const handleFileUpload = (e) => {
@@ -304,6 +354,48 @@ function GameForm({ onGameAdded, getHeaders }) {
                 {result.console_name && (
                   <span className="search-result-console">{result.console_name}</span>
                 )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {searchResults.length === 0 && !titleLocked && onlineAvailable && !onlineSearching && (
+        <button type="button" className="btn-online-search" onClick={handleOnlineSearch}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="10.5" cy="10.5" r="7.5"/>
+            <line x1="21" y1="21" x2="15.8" y2="15.8"/>
+          </svg>
+          Buscar en IGDB
+        </button>
+      )}
+
+      {onlineSearching && (
+        <div className="online-searching">
+          <span className="spinner" /> Buscando en IGDB...
+        </div>
+      )}
+
+      {onlineResults.length > 0 && (
+        <ul className="search-results search-results-online">
+          <li className="search-results-header">Resultados de IGDB:</li>
+          {onlineResults.map(result => (
+            <li key={result.id} onClick={() => handleGameSelection(result)} className="search-result-item">
+              {result.cover && (
+                <img
+                  src={`https:${result.cover.url.replace('t_thumb', 't_cover_big')}`}
+                  alt=""
+                  className="search-result-cover"
+                />
+              )}
+              <div className="search-result-info">
+                <span className="search-result-name">{result.name}</span>
+                <div className="search-result-meta">
+                  {result.console_name && (
+                    <span className="search-result-console">{result.console_name}</span>
+                  )}
+                  <span className="search-result-online-tag">IGDB</span>
+                </div>
               </div>
             </li>
           ))}
