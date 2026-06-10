@@ -14,7 +14,8 @@ function GameForm({ onGameAdded, getHeaders }) {
     completed: false,
     completedAt: null,
     hoursPlayed: '',
-    image: ''
+    image: '',
+    releaseYear: ''
   });
   const [consoles, setConsoles] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -177,11 +178,15 @@ function GameForm({ onGameAdded, getHeaders }) {
       }
     }
 
+    const releaseTs = selectedGame.first_release_date || selectedGame.release_date;
+    const releaseYear = releaseTs ? new Date(releaseTs * 1000).getFullYear().toString() : '';
+
     setGame(prev => ({
       ...prev,
       title: selectedGame.name,
       consoleId,
-      image
+      image,
+      releaseYear
     }));
     setTitleLocked(true);
     setSearchResults([]);
@@ -239,7 +244,8 @@ function GameForm({ onGameAdded, getHeaders }) {
           month_completed: game.completedAt ? game.completedAt.getMonth() + 1 : null,
           hours_played: game.hoursPlayed !== '' ? parseFloat(game.hoursPlayed) : null,
           completed: game.completed,
-          image: game.image
+          image: game.image,
+          release_year: game.releaseYear !== '' ? parseInt(game.releaseYear, 10) : null
         }),
       });
 
@@ -254,7 +260,8 @@ function GameForm({ onGameAdded, getHeaders }) {
         completed: false,
         completedAt: null,
         hoursPlayed: '',
-        image: ''
+        image: '',
+        releaseYear: ''
       });
       setTitleLocked(false);
       onGameAdded();
@@ -351,9 +358,14 @@ function GameForm({ onGameAdded, getHeaders }) {
               )}
               <div className="search-result-info">
                 <span className="search-result-name">{result.name}</span>
-                {result.console_name && (
-                  <span className="search-result-console">{result.console_name}</span>
-                )}
+                <div className="search-result-meta">
+                  {result.console_name && (
+                    <span className="search-result-console">{result.console_name}</span>
+                  )}
+                  {result.release_date && (
+                    <span className="search-result-year">{new Date(result.release_date * 1000).getFullYear()}</span>
+                  )}
+                </div>
               </div>
             </li>
           ))}
@@ -393,6 +405,9 @@ function GameForm({ onGameAdded, getHeaders }) {
                 <div className="search-result-meta">
                   {result.console_name && (
                     <span className="search-result-console">{result.console_name}</span>
+                  )}
+                  {result.first_release_date && (
+                    <span className="search-result-year">{new Date(result.first_release_date * 1000).getFullYear()}</span>
                   )}
                   <span className="search-result-online-tag">IGDB</span>
                 </div>

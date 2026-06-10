@@ -312,6 +312,19 @@ form {
   font-weight: 500;
 }
 
+.search-result-year {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+}
+
+.game-card-year {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 .game-form-fields {
   display: flex;
   gap: 10px;
