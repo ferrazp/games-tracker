@@ -110,6 +110,12 @@ class SQLiteClient {
       });
     });
 
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE games ADD COLUMN release_year INTEGER", (err) => {
+        resolve();
+      });
+    });
+
     const consoles = [
       { name: 'Family Game', launchYear: 1983 },
       { name: 'Super Nintendo', launchYear: 1990 },
@@ -267,6 +273,7 @@ class PostgreSQLClient {
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS year_completed INTEGER`);
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS month_completed INTEGER`);
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS hours_played NUMERIC(8,1)`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS release_year INTEGER`);
 
       await this.pool.query(`DROP VIEW IF EXISTS games_view CASCADE`);
 
@@ -278,7 +285,8 @@ class PostgreSQLClient {
             g.hours_played,
             g.completed, g.image,
             c.name as console_name, c.id as console_id,
-            g.created_at, g.updated_at
+            g.created_at, g.updated_at,
+            g.release_year
         FROM games g
         LEFT JOIN consoles c ON g.console_id = c.id
         ORDER BY g.created_at DESC
@@ -317,7 +325,8 @@ class PostgreSQLClient {
             g.hours_played,
             g.completed, g.image,
             c.name as console_name, c.id as console_id,
-            g.created_at, g.updated_at
+            g.created_at, g.updated_at,
+            g.release_year
         FROM games g
         LEFT JOIN consoles c ON g.console_id = c.id
         ORDER BY g.created_at DESC

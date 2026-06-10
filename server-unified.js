@@ -142,7 +142,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 
 function validateGameData(data) {
-  const { title, console_id, year_played, month_played, year_completed, month_completed, hours_played, image } = data;
+  const { title, console_id, year_played, month_played, year_completed, month_completed, hours_played, release_year, image } = data;
 
   if (!title || typeof title !== 'string' || title.trim() === '') {
     return { valid: false, error: 'Title is required and must be a string' };
@@ -200,6 +200,13 @@ function validateGameData(data) {
     }
   }
 
+  if (release_year !== undefined && release_year !== null && release_year !== '') {
+    const y = typeof release_year === 'number' ? release_year : parseInt(release_year, 10);
+    if (isNaN(y) || !Number.isInteger(y) || y < 1950 || y > CURRENT_YEAR) {
+      return { valid: false, error: `release_year must be an integer between 1950 and ${CURRENT_YEAR}` };
+    }
+  }
+
   return { valid: true };
 }
 
@@ -210,6 +217,7 @@ function parseGameData(data) {
   const rawYearCompleted = data.year_completed;
   const rawMonthCompleted = data.month_completed;
   const rawHours = data.hours_played;
+  const rawReleaseYear = data.release_year;
 
   return {
     title: data.title.trim(),
@@ -226,7 +234,9 @@ function parseGameData(data) {
     hours_played: rawHours !== undefined && rawHours !== null && rawHours !== ''
       ? parseFloat(rawHours) : null,
     completed: data.completed === true || data.completed === 'true',
-    image: data.image || null
+    image: data.image || null,
+    release_year: rawReleaseYear !== undefined && rawReleaseYear !== null && rawReleaseYear !== ''
+      ? parseInt(rawReleaseYear, 10) : null
   };
 }
 
@@ -238,7 +248,7 @@ function parseId(raw) {
 async function fetchGameById(db, id) {
   if (DB_TYPE === 'sqlite') {
     const result = await db.query(
-      `SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at
+      `SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at, g.release_year
        FROM games g
        LEFT JOIN consoles c ON g.console_id = c.id
        WHERE g.id = ?`,
@@ -449,13 +459,13 @@ app.post('/search', async (req, res) => {
     let params;
     if (consoleName) {
       searchSQL = DB_TYPE === 'sqlite'
-        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating FROM game_catalog WHERE title LIKE ? AND console_name = ? ORDER BY rating DESC LIMIT 10`
-        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating FROM game_catalog WHERE title ILIKE $1 AND console_name = $2 ORDER BY rating DESC NULLS LAST LIMIT 10`;
+        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? AND console_name = ? ORDER BY rating DESC LIMIT 10`
+        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 AND console_name = $2 ORDER BY rating DESC NULLS LAST LIMIT 10`;
       params = [searchPattern, consoleName];
     } else {
       searchSQL = DB_TYPE === 'sqlite'
-        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating FROM game_catalog WHERE title LIKE ? ORDER BY rating DESC LIMIT 10`
-        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating FROM game_catalog WHERE title ILIKE $1 ORDER BY rating DESC NULLS LAST LIMIT 10`;
+        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? ORDER BY rating DESC LIMIT 10`
+        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 ORDER BY rating DESC NULLS LAST LIMIT 10`;
       params = [searchPattern];
     }
 
@@ -465,7 +475,8 @@ app.post('/search', async (req, res) => {
       id: g.id,
       name: g.name,
       console_name: g.console_name,
-      cover: g.cover_url ? { url: g.cover_url } : null
+      cover: g.cover_url ? { url: g.cover_url } : null,
+      release_date: g.release_date || null
     }));
 
     res.json({
@@ -503,7 +514,7 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: `fields name,cover.url,platforms.name; search "${sanitizedQuery}"; limit 10;`
+      body: `fields name,cover.url,platforms.name,first_release_date; search "${sanitizedQuery}"; limit 10;`
     });
 
     if (!igdbResponse.ok) {
@@ -519,7 +530,8 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
         name: g.name,
         cover: g.cover?.url ? { url: g.cover.url.replace('/t_thumb/', '/t_cover_big/') } : null,
         console_name: mappedName,
-        platform_name: platform?.name || null
+        platform_name: platform?.name || null,
+        first_release_date: g.first_release_date || null
       };
     });
     res.json({ results, source: 'online' });
@@ -566,7 +578,7 @@ app.get('/games', async (req, res) => {
     const orderClause = isSQLite ? 'ORDER BY g.created_at DESC' : 'ORDER BY g.created_at DESC NULLS LAST';
 
     const selectSQL = `
-      SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image,
+      SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, g.release_year,
              c.name as console_name, c.id as console_id,
              g.created_at, g.updated_at
       FROM games g
@@ -648,10 +660,10 @@ app.post('/games', requireJWT, async (req, res) => {
     }
 
     const insertSQL = DB_TYPE === 'sqlite'
-      ? 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      : 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id';
+      ? 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      : 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id';
 
-    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year];
     const result = await db.query(insertSQL, params);
 
     const newId = DB_TYPE === 'sqlite' ? result.lastID : result.rows[0].id;
@@ -699,10 +711,10 @@ app.put('/games/:id', requireJWT, async (req, res) => {
     }
 
     const updateSQL = DB_TYPE === 'sqlite'
-      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, updated_at = CURRENT_TIMESTAMP WHERE id = $10';
+      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, release_year = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, release_year = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11';
 
-    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, id];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, id];
     const result = await db.query(updateSQL, params);
 
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
