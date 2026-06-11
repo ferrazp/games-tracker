@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Release year (`first_release_date`) en game_catalog y búsqueda online IGDB: nuevo campo en schema, respuesta de endpoints y búsqueda online
 - Endpoint de búsqueda online en IGDB (`POST /search/online`) con retorno de plataforma (`console_name` + `platform_name`)
 - Auto-creación de consolas al seleccionar un juego online con plataforma desconocida
 
