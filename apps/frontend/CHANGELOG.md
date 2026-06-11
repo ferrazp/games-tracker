@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Actualizadas todas las dependencias a últimas versiones estables (React 19, react-datepicker 9, web-vitals 5, date-fns 4, testing-library)
+- DatePicker de mes/año: agregado header custom con dropdown de años y locale español
 
 ### Fixed
 - CORS FRONTEND_URL configurado correctamente para Docker dev (puerto 3001)
