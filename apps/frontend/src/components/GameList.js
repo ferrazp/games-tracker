@@ -294,6 +294,9 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
               <div className="game-info">
                 <h3>{game.title}</h3>
                 <p>{game.console_name || '—'}</p>
+                {game.release_year && (
+                  <div className="game-card-year">{game.release_year}</div>
+                )}
                 <div className="game-meta">
                   <span>Jugado: {formatPlayed(game)}</span>
                   <span className={`game-status ${game.completed ? 'completed' : 'pending'}`}>

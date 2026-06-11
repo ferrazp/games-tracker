@@ -14,7 +14,8 @@ function GameForm({ onGameAdded, getHeaders }) {
     completed: false,
     completedAt: null,
     hoursPlayed: '',
-    image: ''
+    image: '',
+    releaseYear: ''
   });
   const [consoles, setConsoles] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -177,11 +178,15 @@ function GameForm({ onGameAdded, getHeaders }) {
       }
     }
 
+    const releaseTs = selectedGame.first_release_date || selectedGame.release_date;
+    const releaseYear = releaseTs ? new Date(releaseTs * 1000).getFullYear().toString() : '';
+
     setGame(prev => ({
       ...prev,
       title: selectedGame.name,
       consoleId,
-      image
+      image,
+      releaseYear
     }));
     setTitleLocked(true);
     setSearchResults([]);
@@ -223,6 +228,13 @@ function GameForm({ onGameAdded, getHeaders }) {
       return;
     }
 
+    const yearPlayed = game.playedAt ? game.playedAt.getFullYear() : null;
+    if (yearPlayed !== null && game.releaseYear && yearPlayed < parseInt(game.releaseYear)) {
+      setFeedback({ type: 'error', text: `El año jugado (${yearPlayed}) no puede ser anterior al año de lanzamiento (${game.releaseYear})` });
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitting(true);
     setFeedback(null);
 
@@ -233,13 +245,14 @@ function GameForm({ onGameAdded, getHeaders }) {
         body: JSON.stringify({
           title: game.title,
           console_id: game.consoleId,
-          year_played: game.playedAt ? game.playedAt.getFullYear() : null,
+          year_played: yearPlayed,
           month_played: game.playedAt ? game.playedAt.getMonth() + 1 : null,
           year_completed: game.completedAt ? game.completedAt.getFullYear() : null,
           month_completed: game.completedAt ? game.completedAt.getMonth() + 1 : null,
           hours_played: game.hoursPlayed !== '' ? parseFloat(game.hoursPlayed) : null,
           completed: game.completed,
-          image: game.image
+          image: game.image,
+          release_year: game.releaseYear !== '' ? parseInt(game.releaseYear, 10) : null
         }),
       });
 
@@ -254,7 +267,8 @@ function GameForm({ onGameAdded, getHeaders }) {
         completed: false,
         completedAt: null,
         hoursPlayed: '',
-        image: ''
+        image: '',
+        releaseYear: ''
       });
       setTitleLocked(false);
       onGameAdded();
@@ -351,9 +365,14 @@ function GameForm({ onGameAdded, getHeaders }) {
               )}
               <div className="search-result-info">
                 <span className="search-result-name">{result.name}</span>
-                {result.console_name && (
-                  <span className="search-result-console">{result.console_name}</span>
-                )}
+                <div className="search-result-meta">
+                  {result.console_name && (
+                    <span className="search-result-console">{result.console_name}</span>
+                  )}
+                  {result.release_date && (
+                    <span className="search-result-year">{new Date(result.release_date * 1000).getFullYear()}</span>
+                  )}
+                </div>
               </div>
             </li>
           ))}
@@ -394,6 +413,9 @@ function GameForm({ onGameAdded, getHeaders }) {
                   {result.console_name && (
                     <span className="search-result-console">{result.console_name}</span>
                   )}
+                  {result.first_release_date && (
+                    <span className="search-result-year">{new Date(result.first_release_date * 1000).getFullYear()}</span>
+                  )}
                   <span className="search-result-online-tag">IGDB</span>
                 </div>
               </div>
@@ -405,19 +427,22 @@ function GameForm({ onGameAdded, getHeaders }) {
       <div className="game-form-fields">
         <div className="game-form-field">
           <label htmlFor="playedAt">Fecha jugado</label>
-          <DatePicker
-            selected={game.playedAt}
-            onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
-            showMonthYearPicker
-            dateFormat="MM/yyyy"
-            placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
-            disabled={!game.consoleId}
-            minDate={(() => {
-              const c = consoles.find(c => c.id === parseInt(game.consoleId));
-              return c?.launch_year ? new Date(c.launch_year, 0, 1) : undefined;
-            })()}
-            maxDate={new Date(CURRENT_YEAR, 11, 31)}
-          />
+            <DatePicker
+              selected={game.playedAt}
+              onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
+              showMonthYearPicker
+              dateFormat="MM/yyyy"
+              placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
+              disabled={!game.consoleId}
+              minDate={(() => {
+                const c = consoles.find(c => c.id === parseInt(game.consoleId));
+                const consoleYear = c?.launch_year ? new Date(c.launch_year, 0, 1) : null;
+                const releaseYear = game.releaseYear ? new Date(parseInt(game.releaseYear), 0, 1) : null;
+                if (consoleYear && releaseYear) return consoleYear > releaseYear ? consoleYear : releaseYear;
+                return consoleYear || releaseYear || undefined;
+              })()}
+              maxDate={new Date(CURRENT_YEAR, 11, 31)}
+            />
         </div>
 
         <div className="game-form-field game-form-field-checkbox">
