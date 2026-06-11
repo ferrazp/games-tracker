@@ -1,6 +1,7 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-const FRONTEND_VERSION = process.env.REACT_APP_VERSION || '0.1.0';
+const { version } = require('../package.json');
+const FRONTEND_VERSION = version;
 
 async function fetchBackendVersion() {
   try {
