@@ -650,6 +650,10 @@ app.post('/games', requireJWT, async (req, res) => {
       }
     }
 
+    if (data.year_played !== null && data.release_year !== null && data.year_played < data.release_year) {
+      return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the game release year (${data.release_year})` });
+    }
+
     const dupQuery = DB_TYPE === 'sqlite'
       ? 'SELECT 1 FROM games WHERE title = ? AND console_id = ?'
       : 'SELECT 1 FROM games WHERE title = $1 AND console_id = $2';
@@ -708,6 +712,10 @@ app.put('/games/:id', requireJWT, async (req, res) => {
       if (data.year_played !== null && launchYear !== null && data.year_played < launchYear) {
         return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the console launch year (${launchYear})` });
       }
+    }
+
+    if (data.year_played !== null && data.release_year !== null && data.year_played < data.release_year) {
+      return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the game release year (${data.release_year})` });
     }
 
     const updateSQL = DB_TYPE === 'sqlite'
