@@ -235,6 +235,16 @@ function GameForm({ onGameAdded, getHeaders }) {
       return;
     }
 
+    if (game.completed && game.completedAt && game.playedAt) {
+      const played = game.playedAt.getFullYear() * 12 + game.playedAt.getMonth();
+      const completed = game.completedAt.getFullYear() * 12 + game.completedAt.getMonth();
+      if (completed < played) {
+        setFeedback({ type: 'error', text: 'La fecha de completado no puede ser anterior a la fecha de inicio' });
+        setSubmitting(false);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setFeedback(null);
 
@@ -426,7 +436,7 @@ function GameForm({ onGameAdded, getHeaders }) {
 
       <div className="game-form-fields">
         <div className="game-form-field">
-          <label htmlFor="playedAt">Fecha jugado</label>
+          <label htmlFor="playedAt">Empecé a jugar</label>
             <DatePicker
               selected={game.playedAt}
               onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
@@ -461,6 +471,7 @@ function GameForm({ onGameAdded, getHeaders }) {
               showMonthYearPicker
               dateFormat="MM/yyyy"
               placeholderText="Mes y año"
+              minDate={game.playedAt || undefined}
               maxDate={new Date(CURRENT_YEAR, 11, 31)}
             />
           </div>

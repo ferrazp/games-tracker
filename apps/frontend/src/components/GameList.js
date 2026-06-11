@@ -80,12 +80,23 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
   });
 
   const saveEdit = async (id) => {
+    const payload = buildEditPayload();
+    if (payload.completed && payload.year_completed !== null && payload.year_played !== null) {
+      if (payload.year_completed < payload.year_played) {
+        alert('El año de completado no puede ser anterior al año de inicio');
+        return;
+      }
+      if (payload.year_completed === payload.year_played && payload.month_completed !== null && payload.month_played !== null && payload.month_completed < payload.month_played) {
+        alert('El mes de completado no puede ser anterior al mes de inicio en el mismo año');
+        return;
+      }
+    }
     try {
       setSaving(id);
       const response = await fetch(`${API_URL}/games/${id}`, {
         method: 'PUT',
         headers: getHeaders(),
-        body: JSON.stringify(buildEditPayload())
+        body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Error al actualizar');
       setEditingId(null);
@@ -298,7 +309,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
                   <div className="game-card-year">{game.release_year}</div>
                 )}
                 <div className="game-meta">
-                  <span>Jugado: {formatPlayed(game)}</span>
+                  <span>Empecé a jugar: {formatPlayed(game)}</span>
                   <span className={`game-status ${game.completed ? 'completed' : 'pending'}`}>
                     {game.completed ? 'Completado' : 'Pendiente'}
                   </span>
