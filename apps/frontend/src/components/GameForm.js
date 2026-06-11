@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { es } from 'date-fns/locale';
 import API_URL from '../config';
 
 function GameForm({ onGameAdded, getHeaders }) {
@@ -289,6 +290,23 @@ function GameForm({ onGameAdded, getHeaders }) {
     }
   };
 
+  const renderYearHeader = ({ date, changeYear, decreaseYear, increaseYear, prevYearButtonDisabled, nextYearButtonDisabled }) => {
+    const startYear = game.releaseYear ? parseInt(game.releaseYear) : 1970;
+    const years = [];
+    for (let y = startYear; y <= CURRENT_YEAR; y++) {
+      years.push(y);
+    }
+    return (
+      <div className="custom-year-header">
+        <button type="button" onClick={decreaseYear} disabled={prevYearButtonDisabled} className="year-nav-btn">&lt;&lt;</button>
+        <select value={date.getFullYear()} onChange={({target: {value}}) => changeYear(parseInt(value))} className="year-select">
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <button type="button" onClick={increaseYear} disabled={nextYearButtonDisabled} className="year-nav-btn">&gt;&gt;</button>
+      </div>
+    );
+  };
+
   return (
     <form onSubmit={handleSubmit} className="game-form">
       {feedback && (
@@ -441,6 +459,8 @@ function GameForm({ onGameAdded, getHeaders }) {
               selected={game.playedAt}
               onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
               showMonthYearPicker
+              renderCustomHeader={renderYearHeader}
+              locale={es}
               dateFormat="MM/yyyy"
               placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
               disabled={!game.consoleId}
@@ -469,6 +489,7 @@ function GameForm({ onGameAdded, getHeaders }) {
               selected={game.completedAt}
               onChange={(date) => setGame(prev => ({ ...prev, completedAt: date }))}
               showMonthYearPicker
+              renderCustomHeader={renderYearHeader}
               dateFormat="MM/yyyy"
               placeholderText="Mes y año"
               minDate={game.playedAt || undefined}

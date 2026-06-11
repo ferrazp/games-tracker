@@ -1008,6 +1008,44 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.custom-year-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.custom-year-header .year-nav-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+}
+
+.custom-year-header .year-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.custom-year-header .year-select {
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+}
+
+.custom-year-header .year-select option {
+  color: #333;
+  background: white;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
