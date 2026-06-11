@@ -81,7 +81,14 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
 9. **PREGUNTAR AL USUARIO:** "¿Aprobás cerrar la feature NOMBRE (merge a develop + deploy dev)?"
 10. **NO cerrar hasta recibir aprobación explícita.** Si el usuario dice que no, detenerse.
 11. Marcar el item como `- [x]` en `docs/proximos-pasos/AGENTS.md`
- 12. Cerrar feature:
+12. **Si el usuario pide subir versión:**
+    a. Determinar qué repos tuvieron cambios en esta feature (`git diff --stat develop...HEAD`)
+    b. Solo en repos CON cambios: actualizar `package.json` con la nueva versión y commitear
+    c. En repos SIN cambios: no tocar `package.json`, no crear tag
+    d. Crear tag `vX.Y.Z-dev.N` SOLO en repos con cambios (usar misma versión si ambos tienen cambios)
+    e. `src/config.js` en frontend lee versión desde `package.json` (`require('../package.json').version`) — no requiere cambios manuales
+    f. Reconstruir Docker dev (solo los servicios con cambios)
+13. Cerrar feature:
      ```bash
      cd F:\projects\developments\games-tracker-backend
      git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE
@@ -99,25 +106,22 @@ Todos los merges usan `--no-ff` para preservar historial de branches.
 ### "pasa la feature X al main de prod" / "pasá X a producción"
 
 1. Si X es nombre de feature, confirmar que ya está mergeada a develop
-2. Analizar CHANGELOG.md para determinar versión semver:
+2. Determinar qué repos tuvieron cambios (revisar git log comparando develop vs main, o los PRs mergeados). Solo versionar y tagear repos con cambios.
+3. Analizar CHANGELOG.md para determinar versión semver:
    - `### Added` + `### Changed` → MINOR
    - `### Fixed` + `### Security` → PATCH
    - Breaking changes explícitos → MAJOR
-3. Leer última tag: `git tag | Sort-Object -Descending | Select-Object -First 1`
-4. Calcular nueva versión
-5. Release a main:
+4. Leer última tag: `git tag | Sort-Object -Descending | Select-Object -First 1` (en cada repo)
+5. Calcular nueva versión (misma versión semver si ambos repos tienen cambios)
+6. Para cada repo CON cambios:
    ```bash
-   # Backend
-   cd F:\projects\developments\games-tracker-backend
+   # Por cada repo con cambios:
+   cd <REPO>
    git checkout main && git pull
    git merge --no-ff develop
-   git tag vNUEVA_VERSION
-   git push origin main --tags
-
-   # Frontend (mismo tag)
-   cd F:\projects\developments\games-tracker
-   git checkout main && git pull
-   git merge --no-ff develop
+   # Actualizar package.json + CHANGELOG.md ANTES del tag
+   git add package.json CHANGELOG.md
+   git commit -m "docs: release vNUEVA_VERSION"
    git tag vNUEVA_VERSION
    git push origin main --tags
    ```
@@ -240,6 +244,7 @@ Donde `N` es un contador entero que se incrementa por cada tag en develop.
 | "Cierro la feature sin preguntar, total ya está" | El usuario puede querer cambios antes del merge | Preguntar siempre |
 | "Olvidé pushear la feature branch" | Si se pierde el equipo, se pierde el código | Pushear regularmente |
 | "Subí el tag pero no actualicé package.json" | Los version badges quedan desactualizados | package.json ANTES del tag, mismo commit |
+| "Versioné los dos repos pero solo uno cambió" | Tags innecesarios, confusión en versionado | Solo versionar repos con cambios reales |
 
 ## Important Notes
 
@@ -247,6 +252,10 @@ Donde `N` es un contador entero que se incrementa por cada tag en develop.
 - **Nunca cerrar una feature sin preguntar al usuario.** Esperar aprobación explícita.
 - **Los tags de release se crean SOLO desde main.** En develop se usan tags pre-release (`vX.Y.Z-dev.N`) para identificar el estado actual.
 - Pushear feature branches regularmente para backup
-- Misma versión de tag en ambos repos siempre
+- **Versionado selectivo por repo:** solo versionar (package.json + tag) los repos que tuvieron cambios. Si solo cambió frontend, solo frontend recibe nuevo tag. Si ambos cambiaron, usar misma versión semver en ambos.
 - El changelog se actualiza SOLO en los repos que el cambio afecta
-- **Al subir versión (tag dev o release):** actualizar `package.json` en ambos repos con la versión exacta del tag y commitear antes de pushear el tag. Esto asegura que los version badges reflejen el número correcto.
+- **Al subir versión (tag dev o release):**
+  1. Verificar qué repos tuvieron cambios (`git diff --stat develop...HEAD`)
+  2. Solo en repos CON cambios: actualizar `package.json` con la versión exacta del tag y commitear ANTES de pushear el tag
+  3. El frontend lee su versión desde `package.json` vía `src/config.js` (`require('../package.json').version`), no requiere config adicional
+  4. El backend expone su versión via `GET /version` desde su `package.json`
