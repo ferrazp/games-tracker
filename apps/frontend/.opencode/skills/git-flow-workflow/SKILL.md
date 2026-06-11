@@ -239,6 +239,7 @@ Donde `N` es un contador entero que se incrementa por cada tag en develop.
 | "Hago el tag y después actualizo el changelog" | El tag debe reflejar el changelog | Changelog ANTES del tag |
 | "Cierro la feature sin preguntar, total ya está" | El usuario puede querer cambios antes del merge | Preguntar siempre |
 | "Olvidé pushear la feature branch" | Si se pierde el equipo, se pierde el código | Pushear regularmente |
+| "Subí el tag pero no actualicé package.json" | Los version badges quedan desactualizados | package.json ANTES del tag, mismo commit |
 
 ## Important Notes
 
@@ -248,3 +249,4 @@ Donde `N` es un contador entero que se incrementa por cada tag en develop.
 - Pushear feature branches regularmente para backup
 - Misma versión de tag en ambos repos siempre
 - El changelog se actualiza SOLO en los repos que el cambio afecta
+- **Al subir versión (tag dev o release):** actualizar `package.json` en ambos repos con la versión exacta del tag y commitear antes de pushear el tag. Esto asegura que los version badges reflejen el número correcto.
