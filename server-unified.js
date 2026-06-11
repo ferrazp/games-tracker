@@ -654,6 +654,15 @@ app.post('/games', requireJWT, async (req, res) => {
       return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the game release year (${data.release_year})` });
     }
 
+    if (data.completed && data.year_completed !== null && data.year_played !== null) {
+      if (data.year_completed < data.year_played) {
+        return res.status(400).json({ error: `year_completed (${data.year_completed}) cannot be before year_played (${data.year_played})` });
+      }
+      if (data.year_completed === data.year_played && data.month_completed !== null && data.month_played !== null && data.month_completed < data.month_played) {
+        return res.status(400).json({ error: `month_completed (${data.month_completed}) cannot be before month_played (${data.month_played}) in the same year` });
+      }
+    }
+
     const dupQuery = DB_TYPE === 'sqlite'
       ? 'SELECT 1 FROM games WHERE title = ? AND console_id = ?'
       : 'SELECT 1 FROM games WHERE title = $1 AND console_id = $2';
@@ -716,6 +725,15 @@ app.put('/games/:id', requireJWT, async (req, res) => {
 
     if (data.year_played !== null && data.release_year !== null && data.year_played < data.release_year) {
       return res.status(400).json({ error: `year_played (${data.year_played}) cannot be before the game release year (${data.release_year})` });
+    }
+
+    if (data.completed && data.year_completed !== null && data.year_played !== null) {
+      if (data.year_completed < data.year_played) {
+        return res.status(400).json({ error: `year_completed (${data.year_completed}) cannot be before year_played (${data.year_played})` });
+      }
+      if (data.year_completed === data.year_played && data.month_completed !== null && data.month_played !== null && data.month_completed < data.month_played) {
+        return res.status(400).json({ error: `month_completed (${data.month_completed}) cannot be before month_played (${data.month_played}) in the same year` });
+      }
     }
 
     const updateSQL = DB_TYPE === 'sqlite'

@@ -252,6 +252,40 @@ describe('Validation', () => {
     assert.equal(res.status, 400);
     assert.ok(res.body.error.includes('console_id is required'));
   });
+
+  it('POST /games returns 400 when year_completed < year_played', async () => {
+    const res = await request(app)
+      .post('/games')
+      .set('Authorization', auth())
+      .send({ title: 'Completed Before Played', console_id: testConsoleId, year_played: 2020, completed: true, year_completed: 2019 });
+    assert.equal(res.status, 400);
+    assert.ok(res.body.error.includes('year_completed'));
+  });
+
+  it('POST /games returns 400 when month_completed < month_played in same year', async () => {
+    const res = await request(app)
+      .post('/games')
+      .set('Authorization', auth())
+      .send({ title: 'Month Mismatch', console_id: testConsoleId, year_played: 2020, month_played: 12, completed: true, year_completed: 2020, month_completed: 6 });
+    assert.equal(res.status, 400);
+    assert.ok(res.body.error.includes('month_completed'));
+  });
+
+  it('POST /games accepts valid year_completed >= year_played', async () => {
+    const res = await request(app)
+      .post('/games')
+      .set('Authorization', auth())
+      .send({ title: 'Valid Completion', console_id: testConsoleId, year_played: 2020, month_played: 6, completed: true, year_completed: 2021, month_completed: 3 });
+    assert.equal(res.status, 201);
+  });
+
+  it('POST /games accepts valid year_completed same year later month', async () => {
+    const res = await request(app)
+      .post('/games')
+      .set('Authorization', auth())
+      .send({ title: 'Same Year Later Month', console_id: testConsoleId, year_played: 2020, month_played: 3, completed: true, year_completed: 2020, month_completed: 6 });
+    assert.equal(res.status, 201);
+  });
 });
 
 describe('Search', () => {
