@@ -228,6 +228,13 @@ function GameForm({ onGameAdded, getHeaders }) {
       return;
     }
 
+    const yearPlayed = game.playedAt ? game.playedAt.getFullYear() : null;
+    if (yearPlayed !== null && game.releaseYear && yearPlayed < parseInt(game.releaseYear)) {
+      setFeedback({ type: 'error', text: `El año jugado (${yearPlayed}) no puede ser anterior al año de lanzamiento (${game.releaseYear})` });
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitting(true);
     setFeedback(null);
 
@@ -238,7 +245,7 @@ function GameForm({ onGameAdded, getHeaders }) {
         body: JSON.stringify({
           title: game.title,
           console_id: game.consoleId,
-          year_played: game.playedAt ? game.playedAt.getFullYear() : null,
+          year_played: yearPlayed,
           month_played: game.playedAt ? game.playedAt.getMonth() + 1 : null,
           year_completed: game.completedAt ? game.completedAt.getFullYear() : null,
           month_completed: game.completedAt ? game.completedAt.getMonth() + 1 : null,
@@ -420,19 +427,22 @@ function GameForm({ onGameAdded, getHeaders }) {
       <div className="game-form-fields">
         <div className="game-form-field">
           <label htmlFor="playedAt">Fecha jugado</label>
-          <DatePicker
-            selected={game.playedAt}
-            onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
-            showMonthYearPicker
-            dateFormat="MM/yyyy"
-            placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
-            disabled={!game.consoleId}
-            minDate={(() => {
-              const c = consoles.find(c => c.id === parseInt(game.consoleId));
-              return c?.launch_year ? new Date(c.launch_year, 0, 1) : undefined;
-            })()}
-            maxDate={new Date(CURRENT_YEAR, 11, 31)}
-          />
+            <DatePicker
+              selected={game.playedAt}
+              onChange={(date) => setGame(prev => ({ ...prev, playedAt: date }))}
+              showMonthYearPicker
+              dateFormat="MM/yyyy"
+              placeholderText={game.consoleId ? "Mes y año" : "Primero seleccioná una consola"}
+              disabled={!game.consoleId}
+              minDate={(() => {
+                const c = consoles.find(c => c.id === parseInt(game.consoleId));
+                const consoleYear = c?.launch_year ? new Date(c.launch_year, 0, 1) : null;
+                const releaseYear = game.releaseYear ? new Date(parseInt(game.releaseYear), 0, 1) : null;
+                if (consoleYear && releaseYear) return consoleYear > releaseYear ? consoleYear : releaseYear;
+                return consoleYear || releaseYear || undefined;
+              })()}
+              maxDate={new Date(CURRENT_YEAR, 11, 31)}
+            />
         </div>
 
         <div className="game-form-field game-form-field-checkbox">
