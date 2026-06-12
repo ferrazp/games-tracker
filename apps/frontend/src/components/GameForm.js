@@ -477,7 +477,7 @@ function GameForm({ onGameAdded, getHeaders }) {
 
         <div className="game-form-field game-form-field-checkbox">
           <label htmlFor="completed">Completado</label>
-          <input type="checkbox" id="completed" name="completed" checked={game.completed} onChange={handleChange} />
+          <input type="checkbox" id="completed" name="completed" checked={game.completed} onChange={handleChange} disabled={!titleLocked} />
         </div>
       </div>
 

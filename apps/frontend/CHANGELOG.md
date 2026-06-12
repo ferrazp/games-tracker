@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Botón "Completado" se deshabilita hasta seleccionar un juego del catálogo
 - Release year (`first_release_date`) en catálogo de juegos y búsqueda online IGDB: campo de año de lanzamiento visible al buscar y seleccionar juegos
 - Búsqueda online en IGDB desde GameForm: cuando la búsqueda local no encuentra resultados, botón para buscar en IGDB con resultados seleccionables
 - Auto-creación de consolas: si un juego online pertenece a una plataforma que no está en la DB, se crea automáticamente al seleccionarlo
