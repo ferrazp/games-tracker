@@ -12,7 +12,7 @@
 - [x] Agregar año de lanzamiento de juego tanto en game_catalog como en la búsqueda online de IGDB
 - [x] Mejorar la UX del date picker, permitir buscar más rápido entre años
 - [x] El botón completado se habilite al seleccionar un juego
-- [ ] Agregar imagen de las consolas para que aparezcan en la selección con el nombre como referencia
+- [x] Agregar imagen de las consolas para que aparezcan en la selección con el nombre como referencia
 - [ ] Mostrar botón de búsqueda IGDB siempre que haya resultados locales, para permitir buscar online si el juego buscado no aparece en la lista local pero sí aparecen otros juegos
 - [ ] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
 - [ ] Mejorar la alineación de los textos en login
