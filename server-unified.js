@@ -482,7 +482,7 @@ app.post('/search', async (req, res) => {
     res.json({
       results: games,
       source: 'local',
-      online_available: HAS_TWITCH_CREDENTIALS && games.length === 0
+      online_available: HAS_TWITCH_CREDENTIALS
     });
   } catch (error) {
     logger.error({ err: error }, 'Error searching local catalog');
@@ -496,7 +496,7 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Twitch credentials not configured. Set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET in .env' });
     }
 
-    const { query } = req.body;
+    const { query, console_id } = req.body;
 
     const validation = validateSearchQuery(query);
     if (!validation.valid) {
@@ -507,6 +507,24 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
 
     const sanitizedQuery = query.replace(/"/g, '\\"');
 
+    let platformFilter = '';
+    if (console_id) {
+      const db = getDatabase();
+      const consoleQuery = DB_TYPE === 'sqlite'
+        ? 'SELECT name FROM consoles WHERE id = ?'
+        : 'SELECT name FROM consoles WHERE id = $1';
+      const consoleResult = await db.query(consoleQuery, [parseInt(console_id)]);
+      if (consoleResult.rows.length > 0) {
+        const consoleName = consoleResult.rows[0].name;
+        const platformIds = Object.entries(IGDB_PLATFORM_TO_CONSOLE)
+          .filter(([, name]) => name === consoleName)
+          .map(([id]) => id);
+        if (platformIds.length > 0) {
+          platformFilter = ` where platforms = (${platformIds.join(',')});`;
+        }
+      }
+    }
+
     const igdbResponse = await fetch('https://api.igdb.com/v4/games', {
       method: 'POST',
       headers: {
@@ -514,7 +532,7 @@ app.post('/search/online', searchOnlineLimiter, async (req, res) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: `fields name,cover.url,platforms.name,first_release_date; search "${sanitizedQuery}"; limit 10;`
+      body: `fields name,cover.url,platforms.name,first_release_date; search "${sanitizedQuery}";${platformFilter} limit 10;`
     });
 
     if (!igdbResponse.ok) {
