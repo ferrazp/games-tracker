@@ -28,8 +28,14 @@ const CONSOLE_WIKI_MAP = {
 
 const FALLBACK_IMAGES = {
   'Dreamcast': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Dreamcast_logo_Japan.svg/250px-Dreamcast_logo_Japan.svg.png',
-  'PlayStation 3': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/PS3_consoles_montage.png/250px-PS3_consoles_montage.png',
+  'PlayStation 3': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/PlayStation_3_logo.svg/200px-PlayStation_3_logo.svg.png',
   'Xbox 360': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Xbox-360-Consoles-Infobox.png/250px-Xbox-360-Consoles-Infobox.png'
+};
+
+const BUILTIN_SVGS = {
+  'PlayStation 3': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#003791"><path d="M0 0h24v24H0z"/></svg>',
+  'Nintendo 64': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#6b7280"/><text x="32" y="36" font-family="Arial,sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">64</text><text x="32" y="50" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)" text-anchor="middle">NINTENDO</text></svg>',
+  'PlayStation 4': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#003791"><path d="M0 0h24v24H0z"/></svg>'
 };
 
 const THUMB_SIZE = 200;
@@ -138,6 +144,21 @@ async function seedConsoleImages() {
     }
 
     logger.info({ console: console.name }, 'Fetching image...');
+
+    // Check built-in SVGs first (best quality, no download needed)
+    const builtin = BUILTIN_SVGS[console.name];
+    if (builtin) {
+      const b64 = 'data:image/svg+xml;base64,' + Buffer.from(builtin).toString('base64');
+      const updateSQL = DB_TYPE === 'sqlite'
+        ? 'UPDATE consoles SET image = ? WHERE id = ?'
+        : 'UPDATE consoles SET image = $1 WHERE id = $2';
+      await db.query(updateSQL, [b64, console.id]);
+      logger.info({ console: console.name }, 'Built-in SVG saved');
+      seeded++;
+      await sleep(REQUEST_DELAY_MS);
+      continue;
+    }
+
     const imageUrl = await fetchWikipediaImage(console.name);
 
     if (!imageUrl) {
