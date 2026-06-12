@@ -318,12 +318,12 @@ form {
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: #1e1e36;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
   max-height: 240px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .console-dropdown-item {
@@ -334,7 +334,7 @@ form {
   padding: 8px 12px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
+  color: #374151;
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -342,11 +342,11 @@ form {
 }
 
 .console-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: #e5e7eb;
 }
 
 .console-dropdown-item.selected {
-  background: rgba(99, 102, 241, 0.2);
+  background: #6366f1;
   color: #fff;
 }
 
