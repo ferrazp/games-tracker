@@ -34,7 +34,7 @@ const FALLBACK_IMAGES = {
 
 const BUILTIN_SVGS = {
   'PlayStation 3': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#003791"><path d="M0 0h24v24H0z"/></svg>',
-  'Nintendo 64': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#6b7280"/><text x="32" y="36" font-family="Arial,sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">64</text><text x="32" y="50" font-family="Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.7)" text-anchor="middle">NINTENDO</text></svg>',
+  'Nintendo 64': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><rect width="100" height="60" rx="10" fill="#e6e6e6"/><text x="50" y="42" font-family="Arial,sans-serif" font-size="34" font-weight="900" fill="#4b5563" text-anchor="middle">64</text><text x="50" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="bold" fill="#dc2626" text-anchor="middle">NINTENDO</text></svg>',
   'PlayStation 4': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#003791"><path d="M0 0h24v24H0z"/></svg>'
 };
 
