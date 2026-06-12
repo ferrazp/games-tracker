@@ -15,4 +15,6 @@
 - [x] Agregar imagen de las consolas para que aparezcan en la selección con el nombre como referencia
 - [ ] Mostrar botón de búsqueda IGDB siempre que haya resultados locales, para permitir buscar online si el juego buscado no aparece en la lista local pero sí aparecen otros juegos
 - [ ] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
+- [ ] Mejorar UX de consolas — revisión de imágenes homogéneas para todas las consolas
+- [ ] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada
 - [ ] Mejorar la alineación de los textos en login
