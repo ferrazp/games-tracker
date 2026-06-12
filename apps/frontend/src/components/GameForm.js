@@ -316,19 +316,21 @@ function GameForm({ onGameAdded, getHeaders }) {
       )}
 
       <div className="game-form-console-row">
-        <div className="game-form-field">
-          <label htmlFor="consoleId">Consola</label>
-          <select
-            id="consoleId"
-            name="consoleId"
-            value={game.consoleId}
-            onChange={handleConsoleChange}
-          >
-            <option value="">Todas las consolas</option>
-            {consoles.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+        <label className="game-form-label">Consola</label>
+        <div className="console-grid">
+          {consoles.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              className={`console-card${game.consoleId === String(c.id) ? ' selected' : ''}`}
+              onClick={() => handleConsoleChange({ target: { value: String(c.id) } })}
+            >
+              {c.image && (
+                <img src={c.image} alt={c.name} className="console-card-img" />
+              )}
+              <span className="console-card-name">{c.name}</span>
+            </button>
+          ))}
         </div>
       </div>
 

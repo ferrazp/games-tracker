@@ -265,7 +265,98 @@ form {
 }
 
 .game-form-console-row {
+  margin-bottom: 12px;
+}
+
+.game-form-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
   margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.console-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.console-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 72px;
+  max-width: 80px;
+}
+
+.console-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.console-card.selected {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.console-card-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.console-card-name {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.console-grid-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.console-card-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.console-card-compact:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.console-card-compact.selected {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.console-card-img-compact {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .search-result-item {

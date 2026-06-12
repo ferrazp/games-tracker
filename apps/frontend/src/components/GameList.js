@@ -207,12 +207,27 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
               <div className="game-edit-fields">
                 <input name="title" value={editForm.title} onChange={handleEditChange} placeholder="Título" />
                 <div className="game-edit-row">
-                  <select name="console_id" value={editForm.console_id} onChange={handleEditChange}>
-                    <option value="">Consola</option>
+                  <div className="console-grid-compact">
+                    <button
+                      type="button"
+                      className={`console-card-compact${!editForm.console_id ? ' selected' : ''}`}
+                      onClick={() => handleEditChange({ target: { name: 'console_id', value: '' } })}
+                    >
+                      <span className="console-card-name">?</span>
+                    </button>
                     {consoles.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={`console-card-compact${editForm.console_id === String(c.id) ? ' selected' : ''}`}
+                        onClick={() => handleEditChange({ target: { name: 'console_id', value: String(c.id) } })}
+                      >
+                        {c.image && (
+                          <img src={c.image} alt={c.name} className="console-card-img-compact" />
+                        )}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                   <input
                     name="year_played"
                     type="number"
