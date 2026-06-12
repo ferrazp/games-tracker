@@ -123,7 +123,7 @@ function GameForm({ onGameAdded, getHeaders }) {
       const response = await fetch(`${API_URL}/search/online`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: game.title }),
+        body: JSON.stringify({ query: game.title, console_id: game.consoleId || undefined }),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -347,6 +347,16 @@ function GameForm({ onGameAdded, getHeaders }) {
         </button>
         {consoleDropdownOpen && (
           <div className="console-dropdown-panel">
+            <button
+              type="button"
+              className={`console-dropdown-item${!game.consoleId ? ' selected' : ''}`}
+              onClick={() => {
+                handleConsoleChange({ target: { value: '' } });
+                setConsoleDropdownOpen(false);
+              }}
+            >
+              <span>Ninguna</span>
+            </button>
             {consoles.map(c => (
               <button
                 key={c.id}
@@ -440,7 +450,7 @@ function GameForm({ onGameAdded, getHeaders }) {
         </ul>
       )}
 
-      {searchResults.length === 0 && !titleLocked && onlineAvailable && !onlineSearching && (
+      {!titleLocked && onlineAvailable && !onlineSearching && (
         <button type="button" className="btn-online-search" onClick={handleOnlineSearch}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="10.5" cy="10.5" r="7.5"/>
