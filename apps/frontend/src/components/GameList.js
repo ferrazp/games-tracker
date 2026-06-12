@@ -9,7 +9,9 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
   const [deleting, setDeleting] = useState(null);
   const [saving, setSaving] = useState(null);
   const [consoles, setConsoles] = useState([]);
+  const [consoleDropdownOpen, setConsoleDropdownOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const consoleRef = useRef(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -19,6 +21,16 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
         .catch(() => {});
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (consoleRef.current && !consoleRef.current.contains(e.target)) {
+        setConsoleDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const startEdit = (game) => {
     setEditingId(game.id);
@@ -207,26 +219,38 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
               <div className="game-edit-fields">
                 <input name="title" value={editForm.title} onChange={handleEditChange} placeholder="Título" />
                 <div className="game-edit-row">
-                  <div className="console-grid-compact">
+                  <div className="console-edit-wrapper" ref={consoleRef}>
                     <button
                       type="button"
-                      className={`console-card-compact${!editForm.console_id ? ' selected' : ''}`}
-                      onClick={() => handleEditChange({ target: { name: 'console_id', value: '' } })}
+                      className="console-edit-trigger"
+                      onClick={() => setConsoleDropdownOpen(!consoleDropdownOpen)}
                     >
-                      <span className="console-card-name">?</span>
+                      {editForm.console_id ? (() => {
+                        const c = consoles.find(c => String(c.id) === editForm.console_id);
+                        return c?.image
+                          ? <img src={c.image} alt="" className="console-edit-trigger-img" />
+                          : <span className="console-edit-trigger-text">?</span>;
+                      })() : <span className="console-edit-trigger-text">?</span>}
+                      <span className="console-dropdown-arrow">{consoleDropdownOpen ? '▲' : '▼'}</span>
                     </button>
-                    {consoles.map(c => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className={`console-card-compact${editForm.console_id === String(c.id) ? ' selected' : ''}`}
-                        onClick={() => handleEditChange({ target: { name: 'console_id', value: String(c.id) } })}
-                      >
-                        {c.image && (
-                          <img src={c.image} alt={c.name} className="console-card-img-compact" />
-                        )}
-                      </button>
-                    ))}
+                    {consoleDropdownOpen && (
+                      <div className="console-dropdown-panel console-dropdown-panel-compact">
+                        {consoles.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`console-dropdown-item${editForm.console_id === String(c.id) ? ' selected' : ''}`}
+                            onClick={() => {
+                              handleEditChange({ target: { name: 'console_id', value: String(c.id) } });
+                              setConsoleDropdownOpen(false);
+                            }}
+                          >
+                            {c.image && <img src={c.image} alt="" className="console-dropdown-item-img" />}
+                            <span>{c.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <input
                     name="year_played"

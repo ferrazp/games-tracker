@@ -26,6 +26,8 @@ function GameForm({ onGameAdded, getHeaders }) {
   const [onlineAvailable, setOnlineAvailable] = useState(false);
   const [onlineSearching, setOnlineSearching] = useState(false);
   const [onlineResults, setOnlineResults] = useState([]);
+  const [consoleDropdownOpen, setConsoleDropdownOpen] = useState(false);
+  const consoleRef = useRef(null);
 
   useEffect(() => {
     const fetchConsoles = async () => {
@@ -43,6 +45,16 @@ function GameForm({ onGameAdded, getHeaders }) {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (consoleRef.current && !consoleRef.current.contains(e.target)) {
+        setConsoleDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleChange = (e) => {
@@ -315,23 +327,42 @@ function GameForm({ onGameAdded, getHeaders }) {
         </div>
       )}
 
-      <div className="game-form-console-row">
+      <div className="game-form-console-row" ref={consoleRef}>
         <label className="game-form-label">Consola</label>
-        <div className="console-grid">
-          {consoles.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              className={`console-card${game.consoleId === String(c.id) ? ' selected' : ''}`}
-              onClick={() => handleConsoleChange({ target: { value: String(c.id) } })}
-            >
-              {c.image && (
-                <img src={c.image} alt={c.name} className="console-card-img" />
-              )}
-              <span className="console-card-name">{c.name}</span>
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          className="console-dropdown-trigger"
+          onClick={() => setConsoleDropdownOpen(!consoleDropdownOpen)}
+        >
+          {game.consoleId ? (() => {
+            const selected = consoles.find(c => String(c.id) === game.consoleId);
+            return selected ? (
+              <>
+                {selected.image && <img src={selected.image} alt="" className="console-dropdown-selected-img" />}
+                <span>{selected.name}</span>
+              </>
+            ) : <span>Seleccionar consola</span>;
+          })() : <span>Seleccionar consola</span>}
+          <span className="console-dropdown-arrow">{consoleDropdownOpen ? '▲' : '▼'}</span>
+        </button>
+        {consoleDropdownOpen && (
+          <div className="console-dropdown-panel">
+            {consoles.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                className={`console-dropdown-item${game.consoleId === String(c.id) ? ' selected' : ''}`}
+                onClick={() => {
+                  handleConsoleChange({ target: { value: String(c.id) } });
+                  setConsoleDropdownOpen(false);
+                }}
+              >
+                {c.image && <img src={c.image} alt="" className="console-dropdown-item-img" />}
+                <span>{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="game-form-title-row">

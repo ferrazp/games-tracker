@@ -265,6 +265,7 @@ form {
 }
 
 .game-form-console-row {
+  position: relative;
   margin-bottom: 12px;
 }
 
@@ -277,87 +278,124 @@ form {
   letter-spacing: 0.5px;
 }
 
-.console-grid {
+.console-dropdown-trigger {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.console-card {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.15s;
-  min-width: 72px;
-  max-width: 80px;
+  transition: border-color 0.15s;
+  text-align: left;
 }
 
-.console-card:hover {
-  background: rgba(255, 255, 255, 0.1);
+.console-dropdown-trigger:hover {
   border-color: rgba(255, 255, 255, 0.25);
 }
 
-.console-card.selected {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.6);
-}
-
-.console-card-img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.console-card-name {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  text-align: center;
-  line-height: 1.2;
-  word-break: break-word;
-}
-
-.console-grid-compact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.console-card-compact {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 2px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.console-card-compact:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-.console-card-compact.selected {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.6);
-}
-
-.console-card-img-compact {
+.console-dropdown-selected-img {
   width: 24px;
   height: 24px;
   object-fit: contain;
+  border-radius: 3px;
 }
+
+.console-dropdown-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.console-dropdown-panel {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #1e1e36;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.console-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.console-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.console-dropdown-item.selected {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+.console-dropdown-item-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.console-edit-wrapper {
+  position: relative;
+}
+
+.console-edit-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  transition: border-color 0.15s;
+}
+
+.console-edit-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.console-edit-trigger-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.console-edit-trigger-text {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.console-dropdown-panel-compact {
+  min-width: 180px;
+}
+
+
 
 .search-result-item {
   display: flex;
