@@ -4,10 +4,10 @@
 
 Frontend del gestor personal de videojuegos. Consume la API del backend en `http://localhost:4000`.
 
-- **Framework:** React 18 + Create React App
+- **Framework:** React 19 + Vite
 - **Puerto:** 3000
 - **Backend:** `F:\projects\developments\games-tracker-backend` (ver AGENTS.md allí)
-- **API URL:** Centralizada en `src/config.js` (variable `REACT_APP_API_URL` o default `http://localhost:4000`)
+- **API URL:** Centralizada en `src/config.js` (variable `VITE_API_URL` o default `http://localhost:4000`)
 
 ---
 
@@ -15,21 +15,24 @@ Frontend del gestor personal de videojuegos. Consume la API del backend en `http
 
 ```
 games-tracker/
+├── index.html                    # Entry point HTML
+├── vite.config.js                # Vite + Vitest config
 ├── public/
-│   └── index.html               # Título: "Games Tracker"
+│   ├── favicon.ico
+│   └── ...                       # Assets estáticos
 ├── src/
 │   ├── config.js                 # API_URL centralizada
-│   ├── App.js                    # Componente raíz, única fuente de datos
+│   ├── App.jsx                   # Componente raíz, única fuente de datos
 │   ├── App.css                   # Estilos principales (cards, botones, feedback)
-│   ├── index.js                  # Entry point
+│   ├── index.jsx                 # Entry point
 │   ├── index.css                 # Estilos globales
 │   ├── components/
-│   │   ├── GameForm.js           # Formulario: crear juego + búsqueda mock local
-│   │   └── GameList.js           # Lista con editar/eliminar + estados
-│   ├── App.test.js               # Test: renderiza "Registro de Juegos"
-│   └── reportWebVitals.js
+│   │   ├── GameForm.jsx          # Formulario: crear juego + búsqueda mock local
+│   │   ├── GameList.jsx          # Lista con editar/eliminar + estados
+│   │   ├── Login.jsx             # Pantalla de login
+│   │   └── VersionBadge.jsx      # Versiones frontend/backend
+│   └── App.test.jsx              # Test: renderiza "Games Tracker"
 ├── package.json
-├── FIXES.md
 └── AGENTS.md
 ```
 
@@ -39,7 +42,7 @@ games-tracker/
 
 ```powershell
 cd F:\projects\developments\games-tracker
-npm start                       # Inicia en http://localhost:3000
+npm start                       # Inicia Vite dev en http://localhost:3000
 
 # Para lanzar en ventana separada (PowerShell 7):
 Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker-backend" -ArgumentList "-NoExit", "-Command", "npm start"
@@ -47,6 +50,16 @@ Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker" -A
 ```
 
 El backend debe estar corriendo en `http://localhost:4000`.
+
+### Scripts disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm start` | Dev server en puerto 3000 (HMR) |
+| `npm run build` | Build producción a `dist/` |
+| `npm run preview` | Preview local del build |
+| `npm test` | Tests con Vitest |
+| `npm run test:watch` | Tests en modo watch |
 
 ---
 
@@ -66,10 +79,10 @@ El backend debe estar corriendo en `http://localhost:4000`.
 ## 🧩 Componentes
 
 ### `src/config.js`
-- Exporta `API_URL` desde `REACT_APP_API_URL` o default `http://localhost:4000`
+- Exporta `API_URL` desde `import.meta.env.VITE_API_URL` o default `http://localhost:4000`
 - Todos los componentes importan desde aquí (un solo punto de cambio)
 
-### App.js
+### App.jsx
 - **Única fuente de datos** (`useCallback` + `useEffect`)
 - Estados: `games`, `loading`, `error`
 - Callbacks: `onGameAdded`, `onGameDeleted`, `onGameUpdated` → recarga la lista
@@ -105,12 +118,17 @@ El backend debe estar corriendo en `http://localhost:4000`.
 
 | Paquete | Versión | Uso |
 |---------|---------|-----|
-| react | ^18.3.1 | Core |
-| react-dom | ^18.3.1 | DOM renderer |
-| react-scripts | 5.0.1 | Build / CRA |
-| react-datepicker | ^7.3.0 | Selector año |
-| date-fns | ^4.1.0 | Fechas (dep de datepicker) |
-| web-vitals | ^2.1.4 | Métricas |
+| react | ^19.2.7 | Core |
+| react-dom | ^19.2.7 | DOM renderer |
+| vite | ^7.3.5 | Build / dev server |
+| @vitejs/plugin-react | ^4.7.0 | React JSX transform |
+| vitest | ^3.2.6 | Test runner |
+| jsdom | ^26.1.0 | DOM para tests |
+| react-datepicker | ^9.1.0 | Selector año |
+| date-fns | ^4.4.0 | Fechas (dep de datepicker) |
+| @testing-library/react | ^16.3.2 | Render para tests |
+| @testing-library/jest-dom | ^6.9.1 | Matchers DOM |
+| @testing-library/user-event | ^14.6.1 | Simulación usuario |
 
 ---
 
@@ -127,7 +145,8 @@ El backend debe estar corriendo en `http://localhost:4000`.
 ## 🧪 Tests
 
 ```bash
-npm test                        # Verifica que "Games Tracker" y botón "Acceder" se renderizan
+npm test                        # Vitest — verifica que "Games Tracker" y "Acceder" se renderizan
+npm run test:watch              # Modo watch
 ```
 
 ---

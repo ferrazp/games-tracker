@@ -969,6 +969,7 @@ form > button[type="submit"]:disabled {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   flex: none;
+  padding-left: 42px;
 }
 
 .login-input-wrapper {
@@ -1177,4 +1178,73 @@ button:disabled {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===== SIDE PANELS ===== */
+.side-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.side-panel-left {
+  left: 0;
+}
+
+.side-panel-right {
+  right: 0;
+}
+
+.side-panel-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 12px;
+  height: 100%;
+}
+
+.side-panel-cell {
+  flex: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.side-panel-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+  transition: opacity 0.3s;
+}
+
+.side-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.side-panel-left::after {
+  background: linear-gradient(to right, transparent 60%, #0f0c29);
+}
+
+.side-panel-right::after {
+  background: linear-gradient(to left, transparent 60%, #0f0c29);
+}
+
+@media (max-width: 1200px) {
+  .side-panel {
+    width: 120px;
+  }
+}
+
+@media (max-width: 800px) {
+  .side-panel {
+    display: none;
+  }
 }

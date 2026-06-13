@@ -3,6 +3,7 @@ import GameForm from './components/GameForm';
 import GameList from './components/GameList';
 import Login from './components/Login';
 import VersionBadge from './components/VersionBadge';
+import SidePanels from './components/SidePanels';
 import API_URL from './config';
 import './App.css';
 
@@ -59,11 +60,17 @@ function App() {
   const handleGameAdded = () => loadGames();
 
   if (!token) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <>
+        <SidePanels />
+        <Login onLogin={handleLogin} />
+      </>
+    );
   }
 
   return (
     <div className="App">
+      <SidePanels />
       <div className="app-header">
         <h1>Registro de Juegos</h1>
         <div className="app-header-right">

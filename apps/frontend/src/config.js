@@ -1,7 +1,6 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-
-const { version } = require('../package.json');
-const FRONTEND_VERSION = version;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+import pkg from '../package.json';
+const FRONTEND_VERSION = pkg.version;
 
 async function fetchBackendVersion() {
   try {
