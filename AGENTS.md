@@ -68,4 +68,4 @@ See su [📖 AGENTS.md](../../games-tracker/AGENTS.md) para detalles.
 **Modo BD por Defecto**: SQLite (desarrollo)  
 **Alternativa**: PostgreSQL (producción)  
 **Package Manager**: npm (instalado) + pnpm (instalado)  
-**Manual de Operaciones**: See [🐳 DOCKER.md](./DOCKER.md)
+**Manual de Operaciones**: See [🐳 DOCKER.md](./docs/DOCKER.md)

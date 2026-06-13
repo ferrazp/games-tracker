@@ -1,5 +1,6 @@
 ## 🎯 Próximos Pasos Recomendados
 
+- [x] **ALTA PRIORIDAD**: Volúmenes persistentes en contenedores Docker para PostgreSQL — verificar que `postgres_data` (prod) y `postgres_dev_data` (dev) sobrevivan a `docker compose down` y `docker compose up -d --build` sin perder datos de consolas, imágenes, juegos ni catálogo
 - [x] Probar ambas BDs (SQLite y PostgreSQL)
 - [x] Implementar autenticación de usuarios (JWT + Login UI)
 - [x] Agregar rate limiting en IGDB API
@@ -14,6 +15,9 @@
 - [x] El botón completado se habilite al seleccionar un juego
 - [x] Agregar imagen de las consolas para que aparezcan en la selección con el nombre como referencia
 - [x] Mostrar botón de búsqueda IGDB siempre que haya resultados locales, para permitir buscar online si el juego buscado no aparece en la lista local pero sí aparecen otros juegos
+- [x] Poblar `game_catalog` con top 1000 juegos por consola desde IGDB — dev: 7812 games, prod: 7824 games (algunas plataformas <1000 disponibles)
+- [x] Eliminar dependencia `node-fetch` de todos los scripts — usar `globalThis.fetch` nativo de Node.js 20+
+- [x] Documentar estrategia de backup de volúmenes Docker (see [BACKUP-VOLUMENES.md](../BACKUP-VOLUMENES.md))
 - [ ] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
 - [ ] Mejorar UX de consolas — revisión de imágenes homogéneas para todas las consolas
 - [ ] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada

@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import fetch from 'node-fetch';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, getDatabase, closeDatabase, DB_TYPE } from '../db/database.js';
@@ -30,6 +29,7 @@ const PLATFORM_MAP = {
 };
 
 const CONCURRENCY = 10;
+const IGDB_MAX_LIMIT = 500;
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -46,31 +46,48 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-async function fetchTopGames(platformId, accessToken, offset = 0, limit = 500) {
-  const response = await fetch('https://api.igdb.com/v4/games', {
-    method: 'POST',
-    headers: {
-      'Client-ID': TWITCH_CLIENT_ID,
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: `fields name,cover.url,rating,first_release_date; where platforms = (${platformId}) & rating > 0; sort rating desc; limit ${limit}; offset ${offset};`
-  });
+async function fetchTopGames(platformId, accessToken, totalNeeded = 1000) {
+  const allGames = [];
+  const batchSize = Math.min(totalNeeded, IGDB_MAX_LIMIT);
 
-  if (!response.ok) {
-    console.error(`  IGDB error ${response.status} for platform ${platformId}`);
-    return { games: [], rawCount: 0 };
+  while (allGames.length < totalNeeded) {
+    const limit = Math.min(batchSize, totalNeeded - allGames.length);
+    const response = await fetch('https://api.igdb.com/v4/games', {
+      method: 'POST',
+      headers: {
+        'Client-ID': TWITCH_CLIENT_ID,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: `fields name,cover.url,rating,first_release_date; where platforms = (${platformId}) & rating > 0; sort rating desc; limit ${limit}; offset ${allGames.length};`
+    });
+
+    if (!response.ok) {
+      console.error(`  IGDB error ${response.status} for platform ${platformId}`);
+      return { games: allGames, rawCount: allGames.length };
+    }
+
+    const games = await response.json();
+    if (games.length === 0) break;
+
+    allGames.push(...games);
+
+    if (games.length < limit) break;
+
+    await sleep(300);
   }
 
-  const games = await response.json();
-  return { games, rawCount: games.length };
+  return { games: allGames, rawCount: allGames.length };
 }
 
 async function imageToBase64(url) {
   try {
-    const response = await fetch(url, { timeout: 15000 });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (!response.ok) return null;
-    const buffer = await response.buffer();
+    const buffer = Buffer.from(await response.arrayBuffer());
     const contentType = response.headers.get('content-type') || 'image/jpeg';
     const base64 = buffer.toString('base64');
     return `data:${contentType};base64,${base64}`;
@@ -114,15 +131,12 @@ async function seedCatalog() {
   }
 
   const withImages = process.argv.includes('--download-images');
+  const imagesOnly = process.argv.includes('--images-only');
   const limitArg = process.argv.find(a => a.startsWith('--limit='));
-  const GAMES_PER_PLATFORM = limitArg ? parseInt(limitArg.split('=')[1], 10) : 100;
+  const GAMES_PER_PLATFORM = limitArg ? parseInt(limitArg.split('=')[1], 10) : 1000;
 
   await initializeDatabase();
   const db = getDatabase();
-
-  console.log(' Getting Twitch access token...');
-  const accessToken = await getAccessToken();
-  console.log(' Token obtained\n');
 
   const existingResult = await db.query('SELECT igdb_id, cover_url FROM game_catalog');
   const existingIds = new Set(existingResult.rows.map(r => r.igdb_id));
@@ -130,12 +144,26 @@ async function seedCatalog() {
   console.log(` Already in catalog: ${existingIds.size} games`);
   console.log(` With URL covers (not base64): ${existingUrlGames.length} games\n`);
 
+  if (imagesOnly) {
+    if (withImages && existingUrlGames.length > 0) {
+      await convertExistingUrlCovers(existingUrlGames, db);
+    } else {
+      console.log(' No URL covers to convert.');
+    }
+    await printFinalSummary(db);
+    return;
+  }
+
+  console.log(' Getting Twitch access token...');
+  const accessToken = await getAccessToken();
+  console.log(' Token obtained\n');
+
   let totalNew = 0;
 
   for (const [consoleName, platformId] of Object.entries(PLATFORM_MAP)) {
     console.log(` ${consoleName} (platform ${platformId})...`);
 
-    const { games, rawCount } = await fetchTopGames(platformId, accessToken, 0, GAMES_PER_PLATFORM);
+    const { games, rawCount } = await fetchTopGames(platformId, accessToken, GAMES_PER_PLATFORM);
     console.log(`   Found ${rawCount} games on IGDB`);
 
     const newGames = games.filter(g => !existingIds.has(g.id));
@@ -187,44 +215,52 @@ async function seedCatalog() {
   }
 
   if (withImages && existingUrlGames.length > 0) {
-    console.log(`\n=== Downloading images for ${existingUrlGames.length} existing games with URL covers ===\n`);
-
-    const updateSQL = DB_TYPE === 'sqlite'
-      ? 'UPDATE game_catalog SET cover_url = ? WHERE igdb_id = ?'
-      : 'UPDATE game_catalog SET cover_url = $1 WHERE igdb_id = $2';
-
-    await downloadImagesConcurrent(
-      existingUrlGames,
-      r => {
-        const url = r.cover_url;
-        if (!url || url.startsWith('data:')) return null;
-        return url.startsWith('http') ? url.replace('/t_thumb/', '/t_cover_big/') : `https:${url.replace('/t_thumb/', '/t_cover_big/')}`;
-      },
-      async (total) => {
-        console.log(`   Updating ${total} games in database...`);
-      }
-    );
-
-    let updatedCount = 0;
-    for (const game of existingUrlGames) {
-      if (game._coverBase64) {
-        try {
-          await db.query(updateSQL, [game._coverBase64, game.igdb_id]);
-          updatedCount++;
-        } catch (err) {
-          logger.error({ err: err.message, igdb_id: game.igdb_id }, 'Error updating cover');
-        }
-      }
-    }
-    console.log(`   Updated: ${updatedCount}\n`);
+    await convertExistingUrlCovers(existingUrlGames, db);
   }
 
+  await printFinalSummary(db, totalNew);
+}
+
+async function convertExistingUrlCovers(urlGames, db) {
+  console.log(`\n=== Downloading images for ${urlGames.length} existing games with URL covers ===\n`);
+
+  const updateSQL = DB_TYPE === 'sqlite'
+    ? 'UPDATE game_catalog SET cover_url = ? WHERE igdb_id = ?'
+    : 'UPDATE game_catalog SET cover_url = $1 WHERE igdb_id = $2';
+
+  await downloadImagesConcurrent(
+    urlGames,
+    r => {
+      const url = r.cover_url;
+      if (!url || url.startsWith('data:')) return null;
+      return url.startsWith('http') ? url.replace('/t_thumb/', '/t_cover_big/') : `https:${url.replace('/t_thumb/', '/t_cover_big/')}`;
+    },
+    async (total) => {
+      console.log(`   Updating ${total} games in database...`);
+    }
+  );
+
+  let updatedCount = 0;
+  for (const game of urlGames) {
+    if (game._coverBase64) {
+      try {
+        await db.query(updateSQL, [game._coverBase64, game.igdb_id]);
+        updatedCount++;
+      } catch (err) {
+        logger.error({ err: err.message, igdb_id: game.igdb_id }, 'Error updating cover');
+      }
+    }
+  }
+  console.log(`   Updated: ${updatedCount}\n`);
+}
+
+async function printFinalSummary(db, totalNew = 0) {
   const finalResult = await db.query('SELECT COUNT(*) as count FROM game_catalog');
   const base64Count = await db.query("SELECT COUNT(*) as c FROM game_catalog WHERE cover_url LIKE 'data:%'");
   console.log(`\n Final summary:`);
   console.log(`   Total games: ${finalResult.rows[0].count}`);
   console.log(`   With base64 images: ${base64Count.rows[0].c}`);
-  console.log(`   New this run: ${totalNew}`);
+  if (totalNew !== undefined) console.log(`   New this run: ${totalNew}`);
   await closeDatabase();
 }
 

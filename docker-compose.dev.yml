@@ -51,8 +51,7 @@ services:
       context: ../games-tracker
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:4001}
-        REACT_APP_VERSION: ${REACT_APP_VERSION:-1.0.0}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4001}
     container_name: games_tracker_dev_frontend
     ports:
       - "${FRONTEND_PORT:-3001}:80"
