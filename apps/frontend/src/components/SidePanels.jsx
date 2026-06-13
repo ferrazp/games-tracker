@@ -15,29 +15,40 @@ function SidePanels() {
 
   if (covers.length === 0) return null;
 
-  const leftCovers = covers.slice(0, Math.ceil(covers.length / 2));
-  const rightCovers = covers.slice(Math.ceil(covers.length / 2));
+  const perSide = 8;
+  const sides = [
+    { covers: covers.slice(0, perSide), side: 'left' },
+    { covers: covers.slice(perSide, perSide * 2), side: 'right' },
+  ];
 
   return (
     <>
-      <div className="side-panel side-panel-left">
-        <div className="side-panel-grid">
-          {leftCovers.map((url, i) => (
-            <div key={i} className="side-panel-cell">
-              <img src={url} alt="" />
-            </div>
-          ))}
+      {sides.map(({ covers: sideCovers, side }) => (
+        <div key={side} className={`side-panel side-panel-${side}`}>
+          <div className={`side-panel-stack side-panel-stack-${side}`}>
+            {sideCovers.map((url, i) => {
+              const total = sideCovers.length;
+              const top = i * 12;
+              const deg = side === 'left'
+                ? -(3 + (i % 4) * 2)
+                : 3 + (i % 4) * 2;
+              return (
+                <div
+                  key={i}
+                  className="side-panel-card"
+                  style={{
+                    top: `${top}%`,
+                    transform: `rotate(${deg}deg)`,
+                    zIndex: total - i,
+                  }}
+                >
+                  <img src={url} alt="" />
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      <div className="side-panel side-panel-right">
-        <div className="side-panel-grid">
-          {rightCovers.map((url, i) => (
-            <div key={i} className="side-panel-cell">
-              <img src={url} alt="" />
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
     </>
   );
 }
