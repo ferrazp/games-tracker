@@ -1199,27 +1199,36 @@ button:disabled {
   right: 0;
 }
 
-.side-panel-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 20px 12px;
+.side-panel-stack {
+  position: relative;
+  width: 100%;
   height: 100%;
 }
 
-.side-panel-cell {
-  flex: 1;
-  border-radius: 8px;
+.side-panel-card {
+  position: absolute;
+  width: 76%;
+  height: 16%;
+  border-radius: 4px;
   overflow: hidden;
-  min-height: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transform-origin: center center;
 }
 
-.side-panel-cell img {
+.side-panel-left .side-panel-card {
+  left: 4%;
+}
+
+.side-panel-right .side-panel-card {
+  right: 4%;
+}
+
+.side-panel-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.35;
-  transition: opacity 0.3s;
+  display: block;
+  opacity: 0.6;
 }
 
 .side-panel::after {
