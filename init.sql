@@ -62,7 +62,9 @@ INSERT INTO consoles (name, launch_year) VALUES
     ('PlayStation 4', 2013),
     ('Nintendo Switch', 2017),
     ('PlayStation 5', 2020),
-    ('PC', 1981)
+    ('PC', 1981),
+    ('Game Boy Color', 1998),
+    ('Xbox 360', 2005)
 ON CONFLICT (name) DO UPDATE SET launch_year = EXCLUDED.launch_year;
 
 -- Crear vista para obtener juegos con información de consola

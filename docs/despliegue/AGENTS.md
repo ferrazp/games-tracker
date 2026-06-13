@@ -1,5 +1,9 @@
 ## 🚀 Despliegue con Docker
 
+> **⚠️ Rama → Compose:**
+> - `develop` → `docker compose -f docker-compose.dev.yml up -d --build` (puertos: frontend 3001, api 4001, db 5433)
+> - `main`   → `docker compose up -d --build`                     (puertos: frontend 3000, api 4000, db 5432)
+
 Arquitectura: **3 contenedores separados** (PostgreSQL 17 + Backend Node + Frontend Nginx).
 
 ```

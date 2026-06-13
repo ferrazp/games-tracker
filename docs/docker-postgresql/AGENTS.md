@@ -100,7 +100,7 @@ docker-compose up -d
 
 ### Mantenimiento
 
-Ver el manual completo en [🐳 DOCKER.md](../../DOCKER.md) que cubre:
+Ver el manual completo en [🐳 DOCKER.md](../../docs/DOCKER.md) que cubre:
 
 - Ciclo de vida de servicios (up/down/restart)
 - Rebuild después de cambios

@@ -1,0 +1,17 @@
+export const IGDB_PLATFORM_TO_CONSOLE = {
+  18: 'Family Game',
+  19: 'Super Nintendo',
+  4: 'Nintendo 64',
+  23: 'Dreamcast',
+  7: 'PlayStation 1',
+  8: 'PlayStation 2',
+  21: 'GameCube',
+  9: 'PlayStation 3',
+  38: 'PlayStation Portable (PSP)',
+  20: 'Nintendo DS',
+  5: 'Nintendo Wii',
+  48: 'PlayStation 4',
+  130: 'Nintendo Switch',
+  167: 'PlayStation 5',
+  6: 'PC',
+};
