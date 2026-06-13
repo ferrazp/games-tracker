@@ -18,7 +18,7 @@
 - [x] Poblar `game_catalog` con top 1000 juegos por consola desde IGDB — dev: 7812 games, prod: 7824 games (algunas plataformas <1000 disponibles)
 - [x] Eliminar dependencia `node-fetch` de todos los scripts — usar `globalThis.fetch` nativo de Node.js 20+
 - [x] Documentar estrategia de backup de volúmenes Docker (see [BACKUP-VOLUMENES.md](../BACKUP-VOLUMENES.md))
-- [ ] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
+- [x] Side panels con portadas rotadas y solapadas — más juegos visibles en el fondo, menos transparencia
+- [x] Mejorar la alineación de los textos en login — padding-left en labels
 - [ ] Mejorar UX de consolas — revisión de imágenes homogéneas para todas las consolas
 - [ ] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada
-- [ ] Mejorar la alineación de los textos en login
