@@ -31,6 +31,49 @@
   font-weight: 500;
 }
 
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.version-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.version-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.version-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.version-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.version-sep {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .btn-login-header {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
@@ -222,8 +265,137 @@ form {
 }
 
 .game-form-console-row {
-  margin-bottom: 6px;
+  position: relative;
+  margin-bottom: 12px;
 }
+
+.game-form-label {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.console-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  text-align: left;
+}
+
+.console-dropdown-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.console-dropdown-selected-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.console-dropdown-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.console-dropdown-panel {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: #2d2d3a;
+  border: 1px solid #3f3f4f;
+  border-radius: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.console-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.console-dropdown-item:hover {
+  background: #3f3f4f;
+}
+
+.console-dropdown-item.selected {
+  background: #6366f1;
+  color: #fff;
+}
+
+.console-dropdown-item-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.console-edit-wrapper {
+  position: relative;
+}
+
+.console-edit-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  transition: border-color 0.15s;
+}
+
+.console-edit-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.console-edit-trigger-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 2px;
+}
+
+.console-edit-trigger-text {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.console-dropdown-panel-compact {
+  min-width: 180px;
+}
+
+
 
 .search-result-item {
   display: flex;
@@ -267,6 +439,19 @@ form {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.4);
   font-weight: 500;
+}
+
+.search-result-year {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+}
+
+.game-card-year {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .game-form-fields {
@@ -488,6 +673,16 @@ form > button[type="submit"]:disabled {
 
 .game-meta span {
   color: rgba(255, 255, 255, 0.35);
+}
+
+.game-meta-completed {
+  font-size: 11px;
+  color: rgba(81, 207, 102, 0.6);
+}
+
+.game-meta-hours {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .game-status {
@@ -774,6 +969,7 @@ form > button[type="submit"]:disabled {
   text-transform: uppercase;
   letter-spacing: 0.8px;
   flex: none;
+  padding-left: 42px;
 }
 
 .login-input-wrapper {
@@ -871,6 +1067,184 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.btn-online-search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed rgba(102, 126, 234, 0.4);
+  border-radius: 10px;
+  background: rgba(102, 126, 234, 0.08);
+  color: #a5b4fc;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-online-search:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.6);
+  color: #c7d2fe;
+}
+
+.online-searching {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.search-results-online {
+  margin-top: 8px;
+}
+
+.search-results-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  cursor: default;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px 10px 0 0;
+}
+
+.search-results-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.search-result-online-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #a5b4fc;
+  background: rgba(102, 126, 234, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.search-result-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.custom-year-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.custom-year-header .year-nav-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+}
+
+.custom-year-header .year-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.custom-year-header .year-select {
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+}
+
+.custom-year-header .year-select option {
+  color: #333;
+  background: white;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ===== SIDE PANELS ===== */
+.side-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.side-panel-left {
+  left: 0;
+}
+
+.side-panel-right {
+  right: 0;
+}
+
+.side-panel-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 12px;
+  height: 100%;
+}
+
+.side-panel-cell {
+  flex: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.side-panel-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+  transition: opacity 0.3s;
+}
+
+.side-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.side-panel-left::after {
+  background: linear-gradient(to right, transparent 60%, #0f0c29);
+}
+
+.side-panel-right::after {
+  background: linear-gradient(to left, transparent 60%, #0f0c29);
+}
+
+@media (max-width: 1200px) {
+  .side-panel {
+    width: 120px;
+  }
+}
+
+@media (max-width: 800px) {
+  .side-panel {
+    display: none;
+  }
 }

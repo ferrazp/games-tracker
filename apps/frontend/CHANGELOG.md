@@ -8,12 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Selector visual de consolas con imágenes (Wikipedia thumbnails en Base64)
+- Botón "Completado" se deshabilita hasta seleccionar un juego del catálogo
+- Release year (`first_release_date`) en catálogo de juegos y búsqueda online IGDB: campo de año de lanzamiento visible al buscar y seleccionar juegos
+- Búsqueda online en IGDB desde GameForm: botón "Buscar en IGDB" visible siempre, incluso con resultados locales; filtra por consola seleccionada
+- Auto-creación de consolas: si un juego online pertenece a una plataforma que no está en la DB, se crea automáticamente al seleccionarlo
+- Opción "Ninguna" en dropdown de consolas para poder deseleccionar
 - Version badge mostrando versión del frontend y backend
-- Skill de git-flow-workflow con reglas de etiquetado
+- Skill de git-flow-workflow con reglas de etiquetado, CORS fix y solo SQLite local en features
 
 ### Changed
 - Actualizadas todas las dependencias a últimas versiones estables (React 19, react-datepicker 9, web-vitals 5, date-fns 4, testing-library)
-- Ahora se usa SQLite local en feature branches, PostgreSQL solo en Docker dev
+- DatePicker de mes/año: agregado header custom con dropdown de años y locale español
 
 ### Fixed
 - CORS FRONTEND_URL configurado correctamente para Docker dev (puerto 3001)

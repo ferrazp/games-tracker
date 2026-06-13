@@ -7,9 +7,10 @@ RUN npm ci
 
 COPY public ./public
 COPY src ./src
+COPY vite.config.js index.html ./
 
-ARG REACT_APP_API_URL=http://localhost:4000
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ARG VITE_API_URL=http://backend:4000
+ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build
 
@@ -17,7 +18,7 @@ FROM nginx:1.27-alpine AS runner
 
 RUN adduser -D -g '' -h /app appuser
 
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN chown -R appuser:appuser /usr/share/nginx/html /var/cache/nginx /var/run && \

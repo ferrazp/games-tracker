@@ -1,0 +1,261 @@
+---
+name: git-flow-workflow
+description: Gestión de features con git-flow en games-tracker. Triggers: "agrega al proximo paso", "implementar el proximo paso", "pasa la feature X al main de prod". Incluye changelog (Keep a Changelog), versionado semver, y deploy Docker diferenciado dev/prod.
+---
+
+# Git Flow Workflow for Games Tracker
+
+## Branching Model
+
+```
+main        ──●──────────────────●── (production, tagged)
+                \                /
+develop       ───●──●──●──●──●──●── (integration, Docker dev)
+                 \        /
+feature/X       ──●──●──
+```
+
+- `main` — producción, tags semver, deploy con `docker-compose.yml`
+- `develop` — integración, deploy con `docker-compose.dev.yml`
+- `feature/NOMBRE` — creada desde `develop`, trabajo 100% local
+
+## When to Activate
+
+| Trigger | Acción |
+|---------|--------|
+| "agrega al proximo paso" / "agregá al próximo paso" + texto | Agregar item a next-steps checklist |
+| "implementar el proximo paso" / "implementá el próximo paso" | Feature branch completa + deploy dev |
+| "pasa la feature X al main de prod" / "pasá X a producción" | Release a main + tag + deploy prod |
+| Cualquier mención a "git flow", "feature branch", "changelog" o "release" | Seguir este workflow |
+
+## Core Principle
+
+**Feature abierta = 100% local (npm start), nada de Docker. Tags de release (`vX.Y.Z`) solo desde main. Tags de develop (`vX.Y.Z-dev.N`) identifican pre-releases en develop. Las features NO se cierran sin aprobación del usuario. Develop deploya en Docker dev, main deploya en Docker prod.**
+
+## Git Commands (sin git-flow CLI)
+
+| Acción | Comando |
+|--------|---------|
+| Iniciar feature | `git checkout develop && git pull && git checkout -b feature/NOMBRE develop` |
+| Commit | `git add . && git commit -m "tipo(alcance): mensaje"` |
+| Push feature | `git push origin feature/NOMBRE` |
+| Cerrar feature (solo con aprobación) | `git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE` |
+| Push develop | `git push origin develop` |
+| Release a main (ÚNICO lugar para tags) | `git checkout main && git merge --no-ff develop && git tag vNUEVA_VERSION && git push origin main --tags` |
+
+Todos los merges usan `--no-ff` para preservar historial de branches.
+
+## Trigger Mapping
+
+### "agrega al proximo paso" / "agregá al próximo paso"
+
+1. Agregar item a `F:\projects\developments\games-tracker-backend\docs\proximos-pasos\AGENTS.md`
+2. Formato: `- [ ] Descripción del próximo paso` (insertar al final del listado)
+3. **No hacer nada más.** No crear branch, no implementar, no deployar.
+
+### "implementar el proximo paso" / "implementá el próximo paso"
+
+**Apertura de feature:**
+
+1. Leer `docs/proximos-pasos/AGENTS.md` para identificar el primer item `- [ ]` sin marcar
+2. Crear feature branch en ambos repos:
+   ```bash
+   cd F:\projects\developments\games-tracker-backend
+   git checkout develop && git pull && git checkout -b feature/NOMBRE-DEL-PASO develop
+   cd F:\projects\developments\games-tracker
+   git checkout develop && git pull && git checkout -b feature/NOMBRE-DEL-PASO develop
+   ```
+3. Actualizar CHANGELOG.md: agregar entrada descriptiva bajo `[Unreleased]` en la categoría correcta (Added, Changed, Fixed, etc.) en los repos que corresponda. Si no existe, crearlo con template estándar. Commit: `docs(changelog): registro feature/NOMBRE`
+
+**Desarrollo (100% local, sin Docker):**
+
+4. Backend: `npm start` (SQLite en puerto 4000)
+5. Frontend: `npm start` (React en puerto 3000 apuntando a localhost:4000)
+6. Tags de release (`vX.Y.Z`) solo desde main, pero tags de pre-release (`vX.Y.Z-dev.N`) pueden crearse en develop para identificar el estado actual
+7. **No usar Docker ni PostgreSQL para nada mientras la feature esté abierta** — solo SQLite local. Las pruebas con PostgreSQL se hacen recién cuando la feature está cerrada y deployada en Docker dev.
+
+**Cierre de feature (PREVIA APROBACIÓN):**
+
+7. Verificar que la entrada en CHANGELOG.md sigue siendo precisa; actualizar si hace falta
+8. Commit + push en ambos repos
+9. **PREGUNTAR AL USUARIO:** "¿Aprobás cerrar la feature NOMBRE (merge a develop + deploy dev)?"
+10. **NO cerrar hasta recibir aprobación explícita.** Si el usuario dice que no, detenerse.
+11. Marcar el item como `- [x]` en `docs/proximos-pasos/AGENTS.md`
+12. **Si el usuario pide subir versión:**
+    a. Determinar qué repos tuvieron cambios en esta feature (`git diff --stat develop...HEAD`)
+    b. Solo en repos CON cambios: actualizar `package.json` con la nueva versión y commitear
+    c. En repos SIN cambios: no tocar `package.json`, no crear tag
+    d. Crear tag `vX.Y.Z-dev.N` SOLO en repos con cambios (usar misma versión si ambos tienen cambios)
+    e. `src/config.js` en frontend lee versión desde `package.json` (`require('../package.json').version`) — no requiere cambios manuales
+    f. Reconstruir Docker dev (solo los servicios con cambios)
+13. Cerrar feature:
+     ```bash
+     cd F:\projects\developments\games-tracker-backend
+     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE
+     cd F:\projects\developments\games-tracker
+     git checkout develop && git merge --no-ff feature/NOMBRE && git branch -d feature/NOMBRE && git push origin develop && git push origin --delete feature/NOMBRE
+     ```
+13. Deployar en dev:
+    ```powershell
+    $env:DB_PORT='5433'; $env:API_PORT='4001'; $env:FRONTEND_PORT='3001'; $env:FRONTEND_URL='http://localhost:3001'
+    docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build
+    ```
+    > El `.env` tiene `DB_PORT=5432` y `FRONTEND_URL=http://localhost:3000`, por eso se pasan inline.
+14. Verificar: http://localhost:3001 (frontend) y http://localhost:4001/api/health (backend)
+
+### "pasa la feature X al main de prod" / "pasá X a producción"
+
+1. Si X es nombre de feature, confirmar que ya está mergeada a develop
+2. Determinar qué repos tuvieron cambios (revisar git log comparando develop vs main, o los PRs mergeados). Solo versionar y tagear repos con cambios.
+3. Analizar CHANGELOG.md para determinar versión semver:
+   - `### Added` + `### Changed` → MINOR
+   - `### Fixed` + `### Security` → PATCH
+   - Breaking changes explícitos → MAJOR
+4. Leer última tag: `git tag | Sort-Object -Descending | Select-Object -First 1` (en cada repo)
+5. Calcular nueva versión (misma versión semver si ambos repos tienen cambios)
+6. Para cada repo CON cambios:
+   ```bash
+   # Por cada repo con cambios:
+   cd <REPO>
+   git checkout main && git pull
+   git merge --no-ff develop
+   # Actualizar package.json + CHANGELOG.md ANTES del tag
+   git add package.json CHANGELOG.md
+   git commit -m "docs: release vNUEVA_VERSION"
+   git tag vNUEVA_VERSION
+   git push origin main --tags
+   ```
+6. Mover entradas de CHANGELOG.md: de `[Unreleased]` a `## [vNUEVA_VERSION] - YYYY-MM-DD`, dejar `[Unreleased]` vacío con categorías. Commit: `docs(changelog): release vNUEVA_VERSION`
+7. Deployar producción: `docker compose up -d --build`
+8. Verificar: `curl http://localhost:3000` y `curl http://localhost:4000/version`
+
+## Changelog
+
+Cada repo tiene su `CHANGELOG.md` en la raíz. Sigue https://keepachangelog.com/en/1.1.0/.
+
+### Ciclo de vida
+
+| Evento | Acción |
+|--------|--------|
+| Feature abierta | Agregar entrada bajo `[Unreleased]` en categoría correcta. Commit: `docs(changelog): registro feature/NOMBRE` |
+| Feature cerrada | Verificar que la entrada sigue siendo precisa. Pushear develop |
+| Dev tag en develop | Crear `vX.Y.Z-dev.N` en develop. No modifica CHANGELOG. |
+| Release a main | Mover todas las entradas a `[vX.Y.Z] - fecha`. Dejar `[Unreleased]` vacío. Commit: `docs(changelog): release vX.Y.Z` |
+
+### Categorías (orden estricto)
+
+| Categoría | Uso |
+|-----------|-----|
+| `Added` | Features nuevas |
+| `Changed` | Cambios en features existentes |
+| `Deprecated` | Features próximas a eliminar |
+| `Removed` | Features eliminadas |
+| `Fixed` | Bug fixes |
+| `Security` | Vulnerabilidades |
+
+### Template inicial (si no existe CHANGELOG.md)
+
+```markdown
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+### Added
+### Changed
+### Fixed
+
+## [v1.0.0] - 2026-06-08
+### Added
+- CRUD completo de videojuegos
+- Version badge front+backend
+- Month+Year date pickers
+- Hours played field
+- Docker deployment con PostgreSQL
+```
+
+## Docker Compose
+
+| Ambiente | Archivo | Project Name | Comando |
+|----------|---------|-------------|---------|
+| Dev | `docker-compose.dev.yml` | `games_tracker_dev` | `$env:DB_PORT='5433'; $env:API_PORT='4001'; $env:FRONTEND_PORT='3001'; $env:FRONTEND_URL='http://localhost:3001'; docker compose -p games_tracker_dev -f docker-compose.dev.yml up -d --build` |
+| Prod | `docker-compose.yml` | `games_tracker` | `docker compose up -d --build` |
+
+### Puertos
+
+| Servicio | Dev | Prod |
+|----------|-----|------|
+| Frontend | `localhost:3001` | `localhost:3000` |
+| Backend API | `localhost:4001` | `localhost:4000` |
+| PostgreSQL | `localhost:5433` | `localhost:5432` |
+
+## Dev Tagging Convention
+
+### Formato
+
+`vMAJOR.MINOR.PATCH-dev.N`
+
+Donde `N` es un contador entero que se incrementa por cada tag en develop.
+
+### Reglas
+
+- Los dev tags se crean en develop (NO en feature branches)
+- Reflejan la próxima versión semver que se liberará desde develop
+- `v1.1.0-dev.1` < `v1.1.0` (semver: pre-release tiene menor precedencia)
+- Al hacer release a main, se elimina el sufijo `-dev.N` y se crea `vX.Y.Z`
+- El contador `N` se reinicia a 1 cuando cambia `MAJOR.MINOR.PATCH`
+
+### Ejemplo
+
+| Estado | Tag |
+|--------|-----|
+| Develop después de v1.0.0 | `v1.1.0-dev.1` (features nuevas) |
+| Develop después de release | `v1.1.0-dev.1` (según lo que venga) |
+| Release a main | `v1.1.0` |
+
+## Quick Reference
+
+```
+¿Qué quiere hacer?                → Acción
+─────────────────────────────────────────────────────────────────
+"agrega al proximo paso: X"       → Solo editar AGENTS.md
+"implementar el próximo paso"     → feature/ + preguntar antes de cerrar
+"pasa la feature X a producción"  → main merge + tag + prod deploy
+¿Cambia frontend y backend?       → Feature branch en AMBOS repos
+¿Cerrar feature?                  → PREGUNTAR al usuario primero
+¿Tags de release (`vX.Y.Z`)?       → SOLO desde main, NUNCA de develop
+¿Tags de develop (`vX.Y.Z-dev.N`)? → OK en develop, identifican pre-release
+¿Feature cerrada (→ develop)?     → Docker dev (compose.dev.yml)
+¿Release a main?                  → Tag semver + Docker prod (compose.yml)
+```
+
+## Anti-Patterns / Red Flags
+
+| Pensamiento | Realidad | Acción correcta |
+|-------------|----------|-----------------|
+| "Deployo Docker para probar la feature rápido" | Feature abierta = no Docker | Usar `npm start` local |
+| "Solo cambio frontend, no necesito branch en backend" | Si el cambio afecta API o datos, sí | Feature branch en ambos |
+| "No actualizo el changelog, me voy a acordar" | No te vas a acordar | Actualizar al abrir la feature |
+| "Esto es un fix chico, no merece versión" | Todo merge a develop merece entrada en changelog | Siempre registrar |
+| "Hago el tag y después actualizo el changelog" | El tag debe reflejar el changelog | Changelog ANTES del tag |
+| "Cierro la feature sin preguntar, total ya está" | El usuario puede querer cambios antes del merge | Preguntar siempre |
+| "Olvidé pushear la feature branch" | Si se pierde el equipo, se pierde el código | Pushear regularmente |
+| "Subí el tag pero no actualicé package.json" | Los version badges quedan desactualizados | package.json ANTES del tag, mismo commit |
+| "Versioné los dos repos pero solo uno cambió" | Tags innecesarios, confusión en versionado | Solo versionar repos con cambios reales |
+
+## Important Notes
+
+- Ambos repos (frontend + backend) llevan feature branch separada cuando el cambio los afecta
+- **Nunca cerrar una feature sin preguntar al usuario.** Esperar aprobación explícita.
+- **Los tags de release se crean SOLO desde main.** En develop se usan tags pre-release (`vX.Y.Z-dev.N`) para identificar el estado actual.
+- Pushear feature branches regularmente para backup
+- **Versionado selectivo por repo:** solo versionar (package.json + tag) los repos que tuvieron cambios. Si solo cambió frontend, solo frontend recibe nuevo tag. Si ambos cambiaron, usar misma versión semver en ambos.
+- El changelog se actualiza SOLO en los repos que el cambio afecta
+- **Al subir versión (tag dev o release):**
+  1. Verificar qué repos tuvieron cambios (`git diff --stat develop...HEAD`)
+  2. Solo en repos CON cambios: actualizar `package.json` con la versión exacta del tag y commitear ANTES de pushear el tag
+  3. El frontend lee su versión desde `package.json` vía `src/config.js` (`require('../package.json').version`), no requiere config adicional
+  4. El backend expone su versión via `GET /version` desde su `package.json`
