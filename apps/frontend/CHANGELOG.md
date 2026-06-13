@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.1] - 2026-06-13
+
+### Added
+- Side panels con portadas rotadas y solapadas — más juegos visibles en el fondo
+- Login label alignment fix — padding-left en labels de login
+
 ## [Unreleased]
 
 ### Added
@@ -24,6 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - CORS FRONTEND_URL configurado correctamente para Docker dev (puerto 3001)
 
+## [v1.2.0] - 2026-06-13
+
+### Added
+- Side panels decorativos con portadas aleatorias del catálogo
+- Endpoint GET /covers/random en backend
+- Servicio de covers para side panels
+- Login label alignment fix — padding-left en labels de login
+
+### Changed
+- Side panels: de grid a cartas apiladas rotadas y solapadas (v1.2.1)
+
 ## [v1.0.0] - 2026-06-08
 
 ### Added
@@ -41,5 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Documentación del proyecto modularizada en AGENTS.md
 
-[Unreleased]: https://github.com/ferrazp/games-tracker-front/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ferrazp/games-tracker-front/compare/v1.2.1...HEAD
+[v1.2.1]: https://github.com/ferrazp/games-tracker-front/releases/tag/v1.2.1
+[v1.2.0]: https://github.com/ferrazp/games-tracker-front/releases/tag/v1.2.0
 [v1.0.0]: https://github.com/ferrazp/games-tracker-front/releases/tag/v1.0.0
