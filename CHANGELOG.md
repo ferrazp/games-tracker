@@ -5,9 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.3.0] - 2026-06-14
 
 ### Added
+- Índice parcial `idx_catalog_console_cover` en `game_catalog(console_name)` con `WHERE cover_url IS NOT NULL AND cover_url != ''` para acelerar consultas de covers por consola
 - `GET /covers/random?console_id=N` — filtra covers por consola cuando se especifica
 - Imágenes homogéneas de consolas con `image_type` (svg/bitmap), seed script con custom images (PS3, PS4, PS5, Wii, Family Game) + Icons8 para el resto
 - Release year (`first_release_date`) en game_catalog y búsqueda online IGDB: nuevo campo en schema, respuesta de endpoints y búsqueda online
@@ -19,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Console images seed script reescrito: CUSTOM_IMAGES map + ICONS8_MAP, PS5 corregido de 256×256 custom a 64×64 Icons8
+
+### Performance
+- Cobertura de covers por consola ahora usa `Bitmap Index Scan` sobre el índice parcial (0.94ms vs full scan)
+- Side panels en frontend cachean covers por `consoleId` en `useRef` para evitar re-fetch en consolas ya visitadas
 
 ### Fixed
 - CORS FRONTEND_URL configurado correctamente para Docker dev (puerto 3001)
@@ -43,5 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Actualizadas todas las dependencias a últimas versiones (Express 5, pg 8.21, sqlite3 6, dotenv 17)
 - Docker dev separado de prod (docker-compose.dev.yml, puertos 3001/4001/5433)
 
-[Unreleased]: https://github.com/ferrazp/games-tracker/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ferrazp/games-tracker/compare/v1.3.0...HEAD
+[v1.3.0]: https://github.com/ferrazp/games-tracker/releases/tag/v1.3.0
 [v1.0.0]: https://github.com/ferrazp/games-tracker/releases/tag/v1.0.0
