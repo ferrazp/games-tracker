@@ -3,45 +3,44 @@
 ### 1. Instalación
 
 ```bash
-# Clonar repo
-git clone <repo-url>
 cd games-tracker-backend
-
-# Instalar dependencias (elige uno)
-npm install              # Usando npm
-# o
-pnpm install            # Usando pnpm (más rápido)
+npm install
 ```
 
 ### 2. Configurar .env
 
 ```bash
-# Copiar archivo de ejemplo
 cp .env.example .env
-
-# (Opcional) Editar .env con credenciales Twitch
-# Solo necesarias para /search/online y npm run seed:catalog
-# Obtener en: https://dev.twitch.tv/console/apps
 ```
 
-### 3. Iniciar Servidor
+### 3. Elegir Perfil
 
-#### Opción A: SQLite (Desarrollo Local - Recomendado)
+#### 💻 Desarrollo Local (SQLite)
 
 ```bash
-# Automático (usa DB_TYPE=sqlite en .env)
 npm start
-
-# O explícito
-npm run dev:sqlite
+# → API en http://localhost:4000
+# → Frontend aparte en :3000
 ```
 
-#### Opción B: PostgreSQL (Producción)
+#### 🧪 Desarrollo Docker (PostgreSQL)
 
 ```bash
-# Con Docker
-docker-compose up -d
-
-# Esperar health check (~30s)
-npm run dev:postgres
+docker compose -f docker-compose.dev.yml up -d --build
+# → API en http://localhost:4001
+# → Frontend en http://localhost:3001
+# → DB en puerto 5433
 ```
+
+#### 🚀 Producción Docker (PostgreSQL)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# → API en http://localhost:4001
+# → Frontend en http://localhost:9090
+# → DB en puerto 5432, base: games_tracker_prod
+```
+
+### Referencia
+
+See [🌍 Perfiles de Ambiente](../perfiles-ambiente/AGENTS.md) para tabla comparativa completa.

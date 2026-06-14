@@ -1,5 +1,8 @@
 # 📊 Resumen Ejecutivo - Revisión de Código (RE)
 
+> ⚠️ **Documento legacy** (revisión de código original). Mantenido como referencia histórica.  
+> La documentación activa está en `docs/`.
+
 ## 🎯 Misión Completada
 
 Se realizó una **Revisión de Código (RE) completa** de ambos proyectos (backend y frontend) con mejoras implementadas y documentación detallada.

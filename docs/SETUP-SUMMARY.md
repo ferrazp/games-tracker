@@ -1,5 +1,8 @@
 # 📋 Resumen de Setup - Games Tracker Backend
 
+> ⚠️ **Documento legacy** (del setup inicial SQLite→PostgreSQL).  
+> Ver [🚀 Quick Start](./quick-start/AGENTS.md), [🌍 Perfiles de Ambiente](./perfiles-ambiente/AGENTS.md) para documentación actualizada.
+
 ## 🎯 ¿Qué Hicimos?
 
 ### ✅ Completado - Backend Dockerizado con PostgreSQL

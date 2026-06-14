@@ -1,5 +1,8 @@
 # Manual de Desarrollo Local
 
+> ⚠️ **Documento legacy.** La documentación actualizada está en `docs/`.  
+> Ver [🚀 Quick Start](./quick-start/AGENTS.md), [🌍 Perfiles de Ambiente](./perfiles-ambiente/AGENTS.md).
+
 ## Requisitos
 
 - Node.js 20+

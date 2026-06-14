@@ -12,6 +12,8 @@ See: [📂 Estructura del Proyecto](./docs/estructura-proyecto/AGENTS.md)
 
 See: [🚀 Quick Start](./docs/quick-start/AGENTS.md)
 
+See: [🌍 Perfiles de Ambiente](./docs/perfiles-ambiente/AGENTS.md)
+
 See: [🗄️ Sistema Dual Database](./docs/sistema-dual-database/AGENTS.md)
 
 See: [🔌 API REST - Endpoints](./docs/api-rest/AGENTS.md)
@@ -42,6 +44,8 @@ See: [🎯 Próximos Pasos Recomendados](./docs/proximos-pasos/AGENTS.md)
 
 See: [🔄 Migration Plan BD](./docs/migration-plan/AGENTS.md)
 
+See: [🐳 Manual Docker](./docs/DOCKER.md)
+
 ---
 
 ## 🖥️ Frontend
@@ -52,21 +56,20 @@ El frontend (React) está en un proyecto separado:
 F:\projects\developments\games-tracker
 ```
 
-See su [📖 AGENTS.md](../../games-tracker/AGENTS.md) para detalles.
+See su [📖 AGENTS.md](../games-tracker/AGENTS.md) para detalles.
 
-**Ruta relativa desde este repo:** `..\games-tracker`  
-**Puerto desarrollo:** 3000  
-**API URL:** configurable via `REACT_APP_API_URL` o `.env`  
+**Ruta relativa desde este repo:** `..\games-tracker`
 **Docker:** Se construye desde `docker-compose.yml` usando `context: ../games-tracker`
 
 ---
 
-**Última actualización**: 2026-06-07  
-**Versión del Schema**: 1.0  
-**Estado**: ✅ Docker Production Ready  
-**Arquitectura Docker**: 3 contenedores (PostgreSQL 17 + Backend Node + Frontend Nginx)  
-**Modo BD por Defecto**: SQLite (desarrollo)  
-**Alternativa**: PostgreSQL (producción)  
-**Package Manager**: npm (instalado) + pnpm (instalado)  
-**Git Flow**: Siempre usar `git flow feature start <name>` para nuevas features. Rama develop como base.  
+**Última actualización**: 2026-06-14
+**Versión del Schema**: 1.1
+**Estado**: ✅ Docker Production Ready
+**Arquitectura Docker**: Postgres 17 + Backend Node + Frontend Nginx (dev y prod separados)
+**Perfiles**: Dev (`:3001`/`:4001`/`:5433`), Prod (`:9090`/`:4001`/`:5432`), Local (SQLite, `:3000`/`:4000`)
+**Modo BD por Defecto**: SQLite (desarrollo local)
+**Alternativa**: PostgreSQL (Docker dev/prod)
+**Package Manager**: npm (instalado) + pnpm (instalado)
+**Git Flow**: Siempre usar `git flow feature start <name>` para nuevas features. Rama develop como base.
 **Manual de Operaciones**: See [🐳 DOCKER.md](./docs/DOCKER.md)

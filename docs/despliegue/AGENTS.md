@@ -1,94 +1,124 @@
 ## 🚀 Despliegue con Docker
 
-> **⚠️ Rama → Compose:**
-> - `develop` → `docker compose -f docker-compose.dev.yml up -d --build` (puertos: frontend 3001, api 4001, db 5433)
-> - `main`   → `docker compose up -d --build`                     (puertos: frontend 3000, api 4000, db 5432)
+> Ver también: [🌍 Perfiles de Ambiente](../perfiles-ambiente/AGENTS.md) y [🐳 DOCKER.md](../DOCKER.md)
 
-Arquitectura: **3 contenedores separados** (PostgreSQL 17 + Backend Node + Frontend Nginx).
+### Perfiles de Despliegue
 
-```
-games_tracker_db        → PostgreSQL 17 (base de datos)
-games_tracker_backend   → Node 20 (API REST en :4000)
-games_tracker_frontend  → Nginx 1.27 (React build en :80 → host :3000)
-```
+| Perfil | Comando | Frontend | API | DB Host |
+|--------|---------|----------|-----|---------|
+| **Dev** | `docker compose -f docker-compose.dev.yml up -d` | `:3001` | `:4001` | `:5433` |
+| **Prod** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `:9090` | `:4001` | `:5432` |
 
-### Requisitos
+---
 
-- Docker 24+ con WSL 2 integration activada
-- Los proyectos en `F:\projects\developments\games-tracker-backend` y `..\games-tracker`
+### 📋 Checklist: Despliegue a Producción
 
-### 1. Variables de Entorno
+Cuando decidas "pasemos a prod", seguir estos pasos en orden:
 
-```bash
-cp .env.example .env
-```
+#### 1. Preparación
 
-Variables relevantes:
+```powershell
+# Verificar que estás en main
+git checkout main && git pull
 
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| `DB_TYPE` | `sqlite` | En Docker se forza a `postgresql` |
-| `DB_PASSWORD` | `postgres` | Contraseña PostgreSQL |
-| `TWITCH_CLIENT_ID` | — | Opcional, para búsqueda online |
-| `TWITCH_CLIENT_SECRET` | — | Opcional, para búsqueda online |
-| `FRONTEND_URL` | `http://localhost:3000` | CORS |
-| `API_PORT` | `4000` | Puerto host del backend |
-| `FRONTEND_PORT` | `3000` | Puerto host del frontend |
-
-### 2. Build y Deploy
-
-```bash
-# Primer deploy (build + start)
-docker compose up -d --build
-
-# Verificar estado
-docker compose ps
-
-# Ver logs de un contenedor específico
-docker compose logs backend
-docker compose logs frontend
-
-# Shell dentro de un contenedor (útil para debug)
-docker exec -it games_tracker_backend sh
-docker exec -it games_tracker_frontend sh
+# Verificar que develop tiene los cambios que querés
+git log develop..main --oneline
 ```
 
-### ⚠️ Reconstrucción parcial: backend + frontend
+#### 2. Build y Deploy
 
-Ambos contenedores tienen su propio `COPY` durante el build. Si modificás:
+```powershell
+cd F:\projects\developments\games-tracker-backend
 
-| Cambio | Contenedor a rebuild |
-|--------|---------------------|
-| `server-unified.js` | `backend` |
-| `db/*.js` | `backend` |
-| `src/*` (frontend React) | `frontend` |
-| `.env` / `docker-compose.yml` | Ambos |
+# Levantar servicios base + prod
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-```bash
-# Solo backend
-docker compose build backend && docker compose up -d backend
-
-# Solo frontend
-docker compose build frontend && docker compose up -d frontend
-
-# Ambos (siempre seguro)
-docker compose build && docker compose up -d
+# Esperar a que todo esté healthy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
-> **Regla:** si tocás el backend, siempre rebuild `backend`. Si tocás el frontend, siempre rebuild `frontend`. Si tocás archivos compartidos o no estás seguro, rebuild ambos.
+#### 3. Verificar
 
-### 4. Verificar
-
-```bash
+```powershell
 # Health check backend
-curl http://localhost:4000/health
+curl http://localhost:4001/health
 
-# Consolas pre-cargadas
-curl http://localhost:4000/consoles
+# Consolas precargadas (deberían ser 17)
+curl http://localhost:4001/consoles
 
-# Frontend (sirve HTML)
-curl http://localhost:3000
+# Frontend (puerto 9090)
+curl http://localhost:9090
 
-# Nginx proxy API (todo pasa por frontend)
-curl http://localhost:3000/games
+# Verificar que la DB correcta está en uso:
+# Debería mostrar "games_tracker_prod"
+curl http://localhost:4001/health | ConvertFrom-Json | Select -ExpandProperty database
 ```
+
+#### 4. Si es primera vez — Seed de datos
+
+```powershell
+# Seed imágenes de consolas
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-prod node scripts/seed-console-images.js
+
+# Migrar game_catalog desde dev (si existe)
+# See DOCKER.md → Migrar catálogo de dev a prod
+```
+
+---
+
+### ⚠️ Reglas para Merge develop → main
+
+Para no pisar la configuración de producción al mergear:
+
+| Archivo | develop | main | ¿Conflicto? |
+|---------|---------|------|-------------|
+| `docker-compose.yml` | Base (postgres + backend + frontend) | Idéntico | ✅ Sin conflicto esperado |
+| `docker-compose.dev.yml` | Solo existe en develop | No existe en main | ✅ Se mergea |
+| `docker-compose.prod.yml` | Override de producción | Idéntico | ✅ Sin conflicto esperado |
+| `init.sql` | Schema + seed consolas | Idéntico | ✅ |
+| `.env.example` | Template de variables | Idéntico | ✅ |
+| `docs/` | Documentación actualizada | Puede diferir | ⚠️ Resolver aceptando develop |
+| `server-unified.js` | Código del servidor | Idéntico | ✅ |
+| `db/database.js` | Driver BD | Idéntico | ✅ |
+
+**Regla:** Los archivos de configuración de entorno (`docker-compose.dev.yml`, `.env`) y documentación (`docs/`) pueden diferir entre ramas. El código fuente (`server-unified.js`, `db/`, `init.sql`) debe ser idéntico.
+
+---
+
+### Arquitectura de Servicios (Prod)
+
+```
+5 contenedores en red `games_network`:
+
+┌─────────────────────────────────────────────────────┐
+│ games_tracker_db (postgres:17)                      │
+│   - Puertos: 5432:5432                              │
+│   - Bases: games_tracker (base) +                    │
+│            games_tracker_prod (producción)            │
+│   - Volumen: postgres_data                          │
+└────────────┬────────────────────────────────────────┘
+             │
+    ┌────────┴────────┐
+    ▼                 ▼
+┌─────────────┐ ┌──────────────────┐
+│ backend     │ │ backend-prod     │
+│ (:4000)     │ │ (:4001)          │
+│ DB: tracker │ │ DB: tracker_prod │
+└──────┬──────┘ └────────┬─────────┘
+       │                 │
+       ▼                 ▼
+┌─────────────┐ ┌──────────────────┐
+│ frontend    │ │ frontend-prod    │
+│ (:3000)     │ │ (:9090)          │
+└─────────────┘ └──────────────────┘
+```
+
+### Troubleshooting de Despliegue
+
+| Problema | Causa | Solución |
+|----------|-------|----------|
+| `games_tracker_prod` DB no existe | Base no creada | `docker exec games_tracker_db psql -U postgres -c "CREATE DATABASE games_tracker_prod;"` |
+| Error 502 en frontend | Backend no responde | `docker compose logs backend-prod` para debug |
+| Puerto 9090 ocupado | Otro servicio en el puerto | Verificar con `Get-NetTCPConnection -LocalPort 9090` y detener el proceso |
+| CORS bloquea requests | FRONTEND_URL incorrecto | En prod debe ser `http://localhost:9090` |
+| Seed de imágenes no funciona | Consolas ya tienen imágenes | Es idempotente, se puede ejecutar varias veces |

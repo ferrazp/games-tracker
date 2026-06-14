@@ -1,5 +1,8 @@
 # 🎮 Database Configuration - Games Tracker Backend
 
+> ⚠️ **Documento legacy.** La documentación actualizada está en la carpeta `docs/`.  
+> Ver [🌍 Perfiles de Ambiente](./perfiles-ambiente/AGENTS.md), [🐳 DOCKER.md](./DOCKER.md), y [🗄️ Sistema Dual Database](./sistema-dual-database/AGENTS.md).
+
 Este backend soporta **SQLite** (desarrollo personal) y **PostgreSQL** (producción) de manera configurable.
 
 ---

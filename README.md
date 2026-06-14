@@ -6,27 +6,26 @@ API REST para tracking personal de videojuegos. Permite gestionar una colección
 
 - **Runtime:** Node.js 20
 - **Framework:** Express
-- **Base de datos:** PostgreSQL 17 (producción) / SQLite (desarrollo)
+- **Base de datos:** PostgreSQL 17 (Docker) / SQLite (desarrollo local)
 - **Catálogo:** IGDB API (Twitch) — +7800 juegos precargados
 - **Autenticación:** JWT (admin local)
-- **Deploy:** Docker Compose (3 contenedores: PostgreSQL + Backend + Frontend)
+- **Deploy:** Docker Compose (3 perfiles: local, dev Docker, prod Docker)
 
-## Features
+## Perfiles de Entorno
 
-- Catálogo de juegos con covers, rating y fecha de lanzamiento
-- CRUD completo de juegos con asignación por consola
-- Validación año jugado: no puede ser anterior al lanzamiento de la consola
-- Búsqueda local y online (IGDB) con selección de consola
-- Soporte dual SQLite/PostgreSQL sin cambiar código
-- Imágenes en base64 embebidas en DB (sin dependencia de CDN)
-- Seed de hasta 1000 juegos mejor rankeados por plataforma
+| Perfil | Comando | API | Frontend | DB |
+|--------|---------|-----|----------|----|
+| **Local** (SQLite) | `npm start` | `:4000` | `:3000` | `games.db` |
+| **Dev Docker** | `docker compose -f docker-compose.dev.yml up -d` | `:4001` | `:3001` | PostgreSQL `games_tracker` (puerto `5433`) |
+| **Prod Docker** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `:4001` | `:9090` | PostgreSQL `games_tracker_prod` (puerto `5432`) |
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
-docker compose up -d
-curl http://localhost:4000/health
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+curl http://localhost:4001/health
+curl http://localhost:9090
 ```
 
 ## API
@@ -61,20 +60,8 @@ curl http://localhost:4000/health
 | Nintendo Switch | 2017 |
 | PlayStation 5 | 2020 |
 | PC | 1981 |
-
-## Estructura
-
-```
-├── server-unified.js        Servidor Express
-├── db/database.js           Conexión dual SQLite/PostgreSQL
-├── scripts/
-│   ├── seed-catalog.js      Precarga desde IGDB
-│   └── cleanup-catalog.js   Mantenimiento
-├── tests/api.test.js        Tests de API
-├── init.sql                 Schema PostgreSQL
-├── docker-compose.yml       Servicios
-└── .env.example             Configuración
-```
+| Game Boy Color | 1998 |
+| Xbox 360 | 2005 |
 
 ## Documentación
 

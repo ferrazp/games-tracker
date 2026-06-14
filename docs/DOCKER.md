@@ -1,45 +1,32 @@
 # Manual de Operaciones Docker - Games Tracker
 
-> **⚠️ Rama → Compose:**
-> - `develop` → `docker compose -f docker-compose.dev.yml up -d --build` (puertos: frontend 3001, api 4001, db 5433)
-> - `main`   → `docker compose up -d --build`                     (puertos: frontend 3000, api 4000, db 5432)
->
-> Los nombres de contenedores, redes y volúmenes también difieren (sufijo `_dev_` para develop).
+## Perfiles de Entorno
 
-Arquitectura: **3 contenedores**, 1 red, 1 volumen persistente.
+El proyecto expone **3 perfiles de entorno**, cada uno con su propio archivo compose o combinación:
 
-```
-┌─ Host ────────────────────────────────────┐
-│                                            │
-│  :3000  ┌─ frontend ──── nginx:1.27 ──┐   │
-│  ──────▶│  (React SPA)                │   │
-│         └──────────┬───────────────────┘   │
-│                    │ proxy /games          │
-│                    │ /consoles /search     │
-│                    ▼                       │
-│  :4000  ┌─ backend ──── node:20 ───────┐   │
-│  ──────▶│  (Express API)               │   │
-│         └──────────┬───────────────────┘   │
-│                    │ DB connection         │
-│                    ▼                       │
-│         ┌─ postgres ──── postgres:17 ──┐   │
-│         │  (volumen: postgres_data)     │   │
-│         └───────────────────────────────┘   │
-└────────────────────────────────────────────┘
-```
+| Perfil | Comando | Archivo(s) | Uso |
+|--------|---------|-----------|-----|
+| 🧪 **Dev** | `docker compose -f docker-compose.dev.yml up -d` | `docker-compose.dev.yml` | Desarrollo + testing contra PostgreSQL |
+| 🚀 **Prod** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `docker-compose.yml` + `docker-compose.prod.yml` | Producción pública |
+| ⚡ **Base standalone** | `docker compose up -d` | `docker-compose.yml` | Solo servicios base (postgres + backend + frontend) |
+
+> **⚠️ Regla de oro:** No ejecutar dev y prod simultáneamente — comparten puertos de contenedor (4001). Elegir UN perfil por sesión.
+
+See [🌍 Perfiles de Ambiente](./perfiles-ambiente/AGENTS.md) para tabla comparativa detallada.
 
 ---
 
 ## 📋 Índice
 
 1. [Requisitos](#requisitos)
-2. [Primer Despliegue](#primer-despliegue)
-3. [Comandos de Mantenimiento](#comandos-de-mantenimiento)
-4. [Monitoreo y Logs](#monitoreo-y-logs)
-5. [Backup y Restore de la BD](#backup-y-restore-de-la-bd)
-6. [Actualización de Imágenes](#actualización-de-imágenes)
-7. [Escenarios de Recuperación](#escenarios-de-recuperación)
-8. [Arquitectura de Red](#arquitectura-de-red)
+2. [Primer Despliegue - Producción](#primer-despliegue---producción)
+3. [Primer Despliegue - Desarrollo](#primer-despliegue---desarrollo)
+4. [Comandos de Mantenimiento](#comandos-de-mantenimiento)
+5. [Monitoreo y Logs](#monitoreo-y-logs)
+6. [Backup y Restore de la BD](#backup-y-restore-de-la-bd)
+7. [Actualización de Imágenes](#actualización-de-imágenes)
+8. [Escenarios de Recuperación](#escenarios-de-recuperación)
+9. [Arquitectura de Red y Puertos](#arquitectura-de-red-y-puertos)
 
 ---
 
@@ -51,7 +38,9 @@ docker compose version    # plugin v2
 wsl -l -v                 # Ubuntu Running v2
 ```
 
-## Primer Despliegue
+---
+
+## Primer Despliegue - Producción
 
 ```powershell
 cd F:\projects\developments\games-tracker-backend
@@ -60,169 +49,214 @@ cd F:\projects\developments\games-tracker-backend
 cp .env.example .env
 
 # 2. Build imágenes y levantar servicios
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 # 3. Esperar health checks (15-30s)
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 # Todos deben mostrar "(healthy)"
 
 # 4. Verificar
-curl http://localhost:4000/health
-curl http://localhost:4000/consoles
-curl http://localhost:3000
+curl http://localhost:4001/health
+curl http://localhost:4001/consoles
+curl http://localhost:9090     # Frontend en puerto 9090
+
+# 5. Seed de datos (opcional)
+# Si es la primera vez, seedear imágenes de consolas:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-prod node scripts/seed-console-images.js
+# Y migrar catálogo de juegos desde dev a prod (ver sección Backup)
 ```
+
+---
+
+## Primer Despliegue - Desarrollo
+
+```powershell
+cd F:\projects\developments\games-tracker-backend
+
+# 1. Crear .env (si no existe)
+cp .env.example .env
+
+# 2. Build imágenes y levantar servicios
+docker compose -f docker-compose.dev.yml up -d --build
+
+# 3. Esperar health checks
+docker compose -f docker-compose.dev.yml ps
+
+# 4. Verificar
+curl http://localhost:4001/health
+curl http://localhost:3001    # Frontend en puerto 3001
+```
+
+---
 
 ## Comandos de Mantenimiento
 
-### Ciclo de Vida de los Servicios
+### Ciclo de Vida
 
 ```powershell
-# Levantar todo
-docker compose up -d
+# ── PRODUCCIÓN ──
+# Levantar
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # Ver estado
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
-# Reiniciar un servicio específico
-docker compose restart backend
-docker compose restart frontend
-docker compose restart postgres
-
-# Detener (mantiene datos y redes)
-docker compose stop
+# Detener (mantiene datos)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml stop
 
 # Reanudar tras stop
-docker compose start
+docker compose -f docker-compose.yml -f docker-compose.prod.yml start
 
 # Eliminar contenedores (mantiene volúmenes)
-docker compose down
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 # Eliminar TODO (incluye datos de BD)
-docker compose down -v
-```
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
 
-### Migraciones
-
-```powershell
-# Aplicar migraciones pendientes al contenedor corriendo
-docker compose exec backend node db/migrate.js
-
-# También via npm script
-docker compose exec backend npm run migrate
+# ── DESARROLLO ── (mismos comandos, distinto archivo)
+docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml ps
+docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml down -v
 ```
 
 ### Rebuild Después de Cambios
 
 ```powershell
 # Solo backend (tras cambiar server-unified.js)
-docker compose build backend
-docker compose up -d
+docker compose -f docker-compose.dev.yml build backend
+docker compose -f docker-compose.dev.yml up -d
 
-# Solo frontend (tras cambiar src/)
-docker compose build frontend
-docker compose up -d
+# Solo frontend (tras cambiar src/ en games-tracker)
+docker compose -f docker-compose.dev.yml build frontend
+docker compose -f docker-compose.dev.yml up -d
 
-# Ambos
-docker compose up -d --build
+# Ambos + rebuild limpio
+docker compose -f docker-compose.dev.yml up -d --build
 
-# Sin cache (build limpio)
-docker compose build --no-cache backend
+# Para producción, reemplazar el archivo compose:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
 ### Logs
 
 ```powershell
 # Todos los servicios en tiempo real
-docker compose logs -f
+docker compose -f docker-compose.dev.yml logs -f
 
 # Servicio específico
-docker compose logs backend
-docker compose logs -f frontend
+docker compose -f docker-compose.dev.yml logs backend
+docker compose -f docker-compose.prod.yml logs backend-prod
 
 # Últimas N líneas
 docker compose logs --tail=50 backend
-
-# Desde una fecha
-docker compose logs --since="2026-06-07" backend
 ```
+
+### Migraciones
+
+```powershell
+# Producción
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-prod node db/migrate.js
+
+# Desarrollo
+docker compose -f docker-compose.dev.yml exec backend node db/migrate.js
+```
+
+---
 
 ## Monitoreo y Health Checks
 
 Cada contenedor tiene healthcheck automático cada 30s:
 
 ```powershell
-# Ver health status
-docker compose ps
+# Ver health status (todos los servicios activos)
+docker compose -f docker-compose.dev.yml ps
 
-# Inspeccionar health de un contenedor
-docker inspect games_tracker_backend --format '{{.State.Health.Status}}'
+# Inspeccionar health de un contenedor específico
+docker inspect games_tracker_dev_db --format '{{.State.Health.Status}}'
 
 # Ver últimos health checks
-docker inspect games_tracker_db --format '{{json .State.Health}}' | ConvertFrom-Json
+docker inspect games_tracker_dev_db --format '{{json .State.Health}}' | ConvertFrom-Json
+
+# Para producción
+docker inspect games_tracker_db --format '{{.State.Health.Status}}'
 ```
+
+---
 
 ## Backup y Restore de la BD
 
 ### Backup
 
 ```powershell
-# Backup completo
-docker exec games_tracker_db pg_dump -U postgres games_tracker > backup_$(Get-Date -Format yyyyMMdd).sql
+# ── RESPALDO PRODUCCIÓN (games_tracker_prod) ──
+docker exec games_tracker_db pg_dump -U postgres games_tracker_prod > backups/prod_$(Get-Date -Format yyyyMMdd).sql
 
-# Backup solo schema
-docker exec games_tracker_db pg_dump -U postgres --schema-only games_tracker > schema.sql
-
-# Backup solo datos
-docker exec games_tracker_db pg_dump -U postgres --data-only games_tracker > data.sql
+# ── RESPALDO DESARROLLO (games_tracker) ──
+docker exec games_tracker_dev_db pg_dump -U postgres games_tracker > backups/dev_$(Get-Date -Format yyyyMMdd).sql
 ```
 
 ### Restore
 
 ```powershell
+# ── RESTORE PRODUCCIÓN ──
 # Opción 1: Restaurar en contenedor corriendo
-Get-Content backup.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
+Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
 
 # Opción 2: Reset completo + restore
-docker compose down -v
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # Esperar a que postgres esté healthy, luego:
-Get-Content backup.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
+Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
 
-# Opción 3: Montar backup en init (para nuevo deploy)
-Copy-Item backup.sql init.sql
-docker compose up -d --build
+# ── RESTORE DESARROLLO ──
+Get-Content backups/dev_20260612.sql | docker exec -i games_tracker_dev_db psql -U postgres games_tracker
+```
+
+### Migrar catálogo de dev a prod
+
+```powershell
+# Exportar desde dev
+docker exec games_tracker_dev_db psql -U postgres games_tracker -c "\COPY game_catalog TO '/tmp/catalog.csv' CSV HEADER"
+
+# Copiar al host
+docker cp games_tracker_dev_db:/tmp/catalog.csv catalog.csv
+
+# Copiar a prod container
+docker cp catalog.csv games_tracker_db:/tmp/catalog.csv
+
+# Importar en prod
+docker exec games_tracker_db psql -U postgres games_tracker_prod -c "\COPY game_catalog FROM '/tmp/catalog.csv' CSV HEADER"
 ```
 
 ### Backup Automático (Script)
 
-```powershell
-# scripts/backup-db.ps1
-$date = Get-Date -Format yyyyMMdd-HHmmss
-$file = "backups/backup-$date.sql"
-New-Item -ItemType Directory -Force -Path backups | Out-Null
-docker exec games_tracker_db pg_dump -U postgres games_tracker > $file
-Write-Host "Backup saved: $file"
-```
+Ver [📦 BACKUP-VOLUMENES.md](./BACKUP-VOLUMENES.md) para script PowerShell y tareas programadas.
+
+---
 
 ## Actualización de Imágenes
 
 ### PostgreSQL (ej: 17 → 18)
 
 ```powershell
-# 1. Backup de datos
-docker exec games_tracker_db pg_dump -U postgres games_tracker > pre_upgrade_backup.sql
+# 1. Backup de datos (producción y desarrollo)
+docker exec games_tracker_db pg_dump -U postgres games_tracker_prod > pre_upgrade_prod.sql
+docker exec games_tracker_dev_db pg_dump -U postgres games_tracker > pre_upgrade_dev.sql
 
-# 2. Bajar y eliminar volumen (datos viejos no compatibles)
-docker compose down -v
+# 2. Bajar y eliminar volúmenes
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down -v
+docker compose -f docker-compose.dev.yml down -v
 
-# 3. Cambiar tag en docker-compose.yml
+# 3. Cambiar tag en docker-compose.yml y docker-compose.dev.yml
 #    image: postgres:18-alpine
 
 # 4. Rebuild y levantar
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 # 5. Restaurar datos
-Get-Content pre_upgrade_backup.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
+Get-Content pre_upgrade_prod.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
+Get-Content pre_upgrade_dev.sql | docker exec -i games_tracker_dev_db psql -U postgres games_tracker
 ```
 
 ### Node (backend) o Nginx (frontend)
@@ -230,12 +264,14 @@ Get-Content pre_upgrade_backup.sql | docker exec -i games_tracker_db psql -U pos
 ```powershell
 # 1. Cambiar tag en Dockerfile respectivo
 # 2. Rebuild y levantar
-docker compose build backend
-docker compose up -d
+docker compose -f docker-compose.dev.yml build backend
+docker compose -f docker-compose.dev.yml up -d
 
 # Verificar
-docker compose logs backend --tail=5
+docker compose -f docker-compose.dev.yml logs backend --tail=5
 ```
+
+---
 
 ## Escenarios de Recuperación
 
@@ -245,57 +281,90 @@ docker compose logs backend --tail=5
 | `postgres` no healthy | Puerto ocupado o volumen corrupto | `docker compose down -v && docker compose up -d` |
 | `frontend` 404 en API | Nginx proxy mal configurado | Verificar `proxy_pass http://backend:4000` en nginx.conf |
 | Frontend carga pero no datos | CORS | Verificar `FRONTEND_URL` en `.env` del backend |
-| Puerto 5432 ocupado en host | Otro PostgreSQL local | Cambiar `DB_PORT` en `.env` (ej: 5433) |
+| Puerto 5432 ocupado en host | Otro PostgreSQL local | Usar perfil dev (puerto 5433) o cambiar `DB_PORT` |
 | Backend no responde | Error de Node | `docker compose restart backend` |
 | Contenedores no arrancan | WSL integration off | Docker Desktop → Settings → Resources → WSL Integration |
 | "no space left" en volumen | Logs o datos crecieron | `docker system prune -af` (limpiar) |
 | Error de permisos al buildear | WSL filesystem vs NTFS | Asegurar que los proyectos están en NTFS, no dentro de WSL |
+| `games_tracker_prod` no existe | Base no creada | `docker exec games_tracker_db psql -U postgres -c "CREATE DATABASE games_tracker_prod;"` |
 
-## Arquitectura de Red
+---
 
-### Red interna: `games_network`
+## Arquitectura de Red y Puertos
 
-Los 3 contenedores se comunican por DNS interno (bridge):
+### Redes Docker
 
-```
-postgres:5432    → backend usa este host
-backend:4000     → nginx usa este host para proxy
-frontend:80      → expuesto como localhost:3000
-```
+| Perfil | Red | Contenedores |
+|--------|-----|-------------|
+| Dev | `games_dev_network` | `games_tracker_dev_db`, `games_tracker_dev_backend`, `games_tracker_dev_frontend` |
+| Prod | `games_network` | `games_tracker_db`, `games_tracker_backend`, `games_tracker_frontend`, `games_tracker_backend_prod`, `games_tracker_frontend_prod` |
 
 ### Puertos expuestos al host
 
-| Servicio | Puerto Host | Puerto Contenedor | Uso |
-|----------|-------------|-------------------|-----|
-| postgres | 5432 | 5432 | Conexión directa a BD |
-| backend | 4000 | 4000 | API directa |
-| frontend | 3000 | 80 | App web + proxy API |
+#### Dev (`docker-compose.dev.yml`)
 
-Para cambiar puertos, editar `.env`:
+| Servicio | Puerto Host | Puerto Contenedor | Container Name |
+|----------|-------------|-------------------|----------------|
+| postgres | 5433 | 5432 | `games_tracker_dev_db` |
+| backend | 4001 | 4000 | `games_tracker_dev_backend` |
+| frontend | 3001 | 80 | `games_tracker_dev_frontend` |
 
-```env
-API_PORT=4001
-FRONTEND_PORT=3001
-DB_PORT=5433
+#### Prod (`docker-compose.yml` + `docker-compose.prod.yml`)
+
+| Servicio | Puerto Host | Puerto Contenedor | Container Name |
+|----------|-------------|-------------------|----------------|
+| postgres | 5432 | 5432 | `games_tracker_db` |
+| backend (base) | 4000 | 4000 | `games_tracker_backend` |
+| frontend (base) | 3000 | 80 | `games_tracker_frontend` |
+| backend-prod | 4001 | 4000 | `games_tracker_backend_prod` |
+| frontend-prod | 9090 | 9090 | `games_tracker_frontend_prod` |
+
+### Volúmenes persistentes
+
+| Volumen | Perfil | Base de Datos | Propósito |
+|---------|--------|---------------|-----------|
+| `postgres_data` | Prod | `games_tracker` + `games_tracker_prod` | Datos de producción |
+| `postgres_dev_data` | Dev | `games_tracker` | Datos de desarrollo |
+
+> ⚠️ Ambos volúmenes sobreviven a `docker compose down`. Solo se eliminan con `docker compose down -v`.
+
+### ⚠️ Error común: upstream "backend" no encontrado
+
+Si el frontend-prod no arranca con `host not found in upstream "backend"`, es porque el `nginx.conf` dentro de la imagen apunta a `http://backend:4000` pero el servicio en prod se llama `backend-prod`.
+
+**Solución:** Montar un `nginx.prod.conf` con el upstream correcto (ya configurado en `docker-compose.prod.yml` vía volumen):
+
+```yaml
+volumes:
+  - ./nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
 ```
 
-### Volumen persistente: `postgres_data`
+El archivo `nginx.prod.conf` escucha en puerto 9090 y apunta a `backend-prod:4000`.
 
-- Tipo: `local` (en disco del host)
-- Propósito: mantener datos de BD entre reinicios
-- Ruta real: manejada por Docker (`docker volume inspect games-tracker-backend_postgres_data`)
-- Backup: usar `pg_dump` (ver sección backup)
+### Comunicación interna
+
+Los servicios se comunican por DNS interno (bridge):
+
+```
+Dev:  postgres:5432 → backend usa este host
+Dev:  backend:4000  → frontend usa este host como proxy
+
+Prod: postgres:5432 → backend y backend-prod usan este host
+Prod: backend-prod:4000  → frontend-prod usa este host como proxy
+```
+
+---
 
 ## Extra: Desarrollo Sin Docker
 
 ```bash
-# Solo backend con SQLite
+# Solo backend con SQLite (recomendado para features)
 npm run dev:sqlite
 
-# Solo backend con PostgreSQL (necesita postgres corriendo)
+# Solo backend con PostgreSQL (necesita postgres corriendo local)
 npm run dev:postgres
 
 # Frontend standalone
 cd ../games-tracker
-npm start
+npm run dev
 ```

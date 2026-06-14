@@ -12,8 +12,8 @@ La forma más segura y portable de respaldar la base de datos es exportar un arc
 # Crear carpeta de respaldos
 New-Item -ItemType Directory -Force -Path backups
 
-# Respaldo producción (main)
-docker exec games_tracker_db pg_dump -U postgres games_tracker > backups/prod_$(Get-Date -Format yyyyMMdd).sql
+# Respaldo producción (main, base games_tracker_prod)
+docker exec games_tracker_db pg_dump -U postgres games_tracker_prod > backups/prod_$(Get-Date -Format yyyyMMdd).sql
 
 # Respaldo desarrollo (develop)
 docker exec games_tracker_dev_db pg_dump -U postgres games_tracker > backups/dev_$(Get-Date -Format yyyyMMdd).sql
@@ -27,7 +27,10 @@ docker exec games_tracker_dev_db pg_dump -U postgres games_tracker > backups/dev
 $date = Get-Date -Format yyyyMMdd-HHmmss
 $file = "backups/backup-$date.sql"
 New-Item -ItemType Directory -Force -Path backups | Out-Null
-docker exec games_tracker_db pg_dump -U postgres games_tracker > $file
+# Backup de producción (ajustar container y DB name según perfil)
+docker exec games_tracker_db pg_dump -U postgres games_tracker_prod > backups/prod_$(Get-Date -Format yyyyMMdd-HHmmss).sql
+# Backup de desarrollo
+docker exec games_tracker_dev_db pg_dump -U postgres games_tracker > backups/dev_$(Get-Date -Format yyyyMMdd-HHmmss).sql
 Write-Host "Backup saved: $file"
 ```
 
@@ -48,7 +51,7 @@ Write-Host "Backup saved: $file"
 crontab -e
 
 # Añadir línea para backup diario a las 3 AM
-0 3 * * * cd /path/to/project && docker exec games_tracker_db pg_dump -U postgres games_tracker > backups/$(date +\%Y\%m\%d).sql
+0 3 * * * cd /path/to/project && docker exec games_tracker_db pg_dump -U postgres games_tracker_prod > backups/$(date +\%Y\%m\%d).sql
 ```
 
 ## Store Backup Fuera del Host
@@ -69,19 +72,24 @@ Para protección contra formateo:
 docker compose down -v
 docker compose up -d
 # Esperar a que postgres esté healthy
-Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
+# Si el backup es de games_tracker_prod
+Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
 
-# Aplicar init.sql (consolas, tablas) si es restore limpio
-Get-Content init.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
-Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker
+# Si es restore desde init.sql (schema + consolas)
+Get-Content init.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
+Get-Content backups/prod_20260612.sql | docker exec -i games_tracker_db psql -U postgres games_tracker_prod
 ```
 
 ## Verificar Integridad
 
 ```powershell
-# Listar tablas y conteos
+# Listar tablas y conteos (desarrollo)
 docker exec games_tracker_dev_db psql -U postgres games_tracker -c "\dt+"
 docker exec games_tracker_dev_db psql -U postgres games_tracker -c "SELECT COUNT(*) FROM consoles; SELECT COUNT(*) FROM games; SELECT COUNT(*) FROM game_catalog;"
+
+# Listar tablas y conteos (producción)
+docker exec games_tracker_db psql -U postgres games_tracker_prod -c "\dt+"
+docker exec games_tracker_db psql -U postgres games_tracker_prod -c "SELECT COUNT(*) FROM consoles; SELECT COUNT(*) FROM games; SELECT COUNT(*) FROM game_catalog;"
 ```
 
 ## Resumen: Qué NO Hacer
