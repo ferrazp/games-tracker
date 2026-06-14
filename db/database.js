@@ -122,6 +122,12 @@ class SQLiteClient {
       });
     });
 
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE consoles ADD COLUMN image_type TEXT", (err) => {
+        resolve();
+      });
+    });
+
     const consoles = [
       { name: 'Family Game', launchYear: 1983 },
       { name: 'Super Nintendo', launchYear: 1990 },
@@ -282,6 +288,7 @@ class PostgreSQLClient {
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS release_year INTEGER`);
 
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image TEXT`);
+      await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image_type VARCHAR(20) DEFAULT 'bitmap'`);
 
       await this.pool.query(`DROP VIEW IF EXISTS games_view CASCADE`);
 

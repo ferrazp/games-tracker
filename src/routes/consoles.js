@@ -8,7 +8,7 @@ const router = Router();
 router.get('/consoles', async (req, res) => {
   try {
     const db = getDatabase();
-    const result = await db.query('SELECT id, name, launch_year, image FROM consoles ORDER BY name ASC');
+    const result = await db.query('SELECT id, name, launch_year, image, image_type FROM consoles ORDER BY name ASC');
     res.json({ consoles: result.rows });
   } catch (error) {
     logger.error({ err: error }, 'Error fetching consoles');
