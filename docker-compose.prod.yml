@@ -1,0 +1,41 @@
+services:
+  backend-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: games_tracker_backend_prod
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_TYPE: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: games_tracker_prod
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      FRONTEND_URL: http://localhost:3001
+    ports:
+      - "4001:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - games_network
+    restart: unless-stopped
+
+  frontend-prod:
+    build:
+      context: ../games-tracker
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4001
+    container_name: games_tracker_frontend_prod
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend-prod
+    networks:
+      - games_network
+    restart: unless-stopped
