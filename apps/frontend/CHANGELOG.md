@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Side panels dinámicos: cambian las portadas según la consola seleccionada en GameForm/GameList
+- Componente ConsoleImage para renderizar imágenes SVG inline o bitmap según image_type
 - Selector visual de consolas con imágenes (Wikipedia thumbnails en Base64)
 - Botón "Completado" se deshabilita hasta seleccionar un juego del catálogo
 - Release year (`first_release_date`) en catálogo de juegos y búsqueda online IGDB: campo de año de lanzamiento visible al buscar y seleccionar juegos
