@@ -22,3 +22,7 @@
 - [x] Mejorar UX de consolas — revisión de imágenes homogéneas para todas las consolas
 - [x] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada
 - [x] Mejorar la alineación de los textos en login
+- [ ] Agregar buscador de juegos jugados (games) — filtros por título, consola, año, completado, etc.
+- [ ] Mejorar UX: reducir espacio blanco entre side panels y contenido principal
+- [ ] Evaluar diseño mobile responsive: propuesta para que la app se adapte a mobile manteniendo aspecto web actual, activándose automáticamente según dispositivo
+- [ ] ABM de notas por juego: múltiples notas con fecha de creación para juegos en progreso, pensado para recordar objetivos, trucos, etc.
