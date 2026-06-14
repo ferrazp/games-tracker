@@ -66,6 +66,7 @@ class SQLiteClient {
       );
       CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title);
       CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name);
+      CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != '';
       CREATE TABLE IF NOT EXISTS _migrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -270,6 +271,7 @@ class PostgreSQLClient {
 
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title)`);
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name)`);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != ''`);
 
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS _migrations (

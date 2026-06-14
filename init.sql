@@ -45,6 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_games_completed ON games(completed);
 -- Índices para catálogo
 CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title);
 CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name);
+CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != '';
 
 -- Insertar consolas en orden de salida
 INSERT INTO consoles (name, launch_year) VALUES
