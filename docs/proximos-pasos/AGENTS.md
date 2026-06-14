@@ -20,5 +20,5 @@
 - [x] Documentar estrategia de backup de volúmenes Docker (see [BACKUP-VOLUMENES.md](../BACKUP-VOLUMENES.md))
 - [x] Mejorar el blanco de los costados de la web app, posiblemente con una mezcla de imágenes de juegos históricos
 - [x] Mejorar UX de consolas — revisión de imágenes homogéneas para todas las consolas
-- [ ] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada
+- [x] En los blancos de los costados, cambiar las imágenes en base a la consola seleccionada
 - [x] Mejorar la alineación de los textos en login
