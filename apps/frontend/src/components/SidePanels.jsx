@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import API_URL from '../config';
 
-function SidePanels() {
+function SidePanels({ consoleId }) {
   const [covers, setCovers] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API_URL}/covers/random`)
+    const params = consoleId ? `?console_id=${consoleId}` : '';
+    fetch(`${API_URL}/covers/random${params}`)
       .then(r => r.json())
       .then(data => { if (!cancelled) setCovers(data.covers || []); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [consoleId]);
 
   if (covers.length === 0) return null;
 

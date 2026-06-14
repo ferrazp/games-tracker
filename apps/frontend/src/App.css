@@ -305,6 +305,12 @@ form {
   border-radius: 3px;
 }
 
+.console-dropdown-selected-img > svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .console-dropdown-arrow {
   margin-left: auto;
   font-size: 10px;
@@ -357,6 +363,12 @@ form {
   border-radius: 3px;
 }
 
+.console-dropdown-item-img > svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .console-edit-wrapper {
   position: relative;
 }
@@ -384,6 +396,12 @@ form {
   height: 20px;
   object-fit: contain;
   border-radius: 2px;
+}
+
+.console-edit-trigger-img > svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .console-edit-trigger-text {

@@ -3,8 +3,9 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { es } from 'date-fns/locale';
 import API_URL from '../config';
+import ConsoleImage from './ConsoleImage';
 
-function GameForm({ onGameAdded, getHeaders }) {
+function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
   const searchTimeout = useRef(null);
   const fileInputRef = useRef(null);
   const CURRENT_YEAR = new Date().getFullYear();
@@ -68,6 +69,7 @@ function GameForm({ onGameAdded, getHeaders }) {
   const handleConsoleChange = (e) => {
     const value = e.target.value;
     setGame(prev => ({ ...prev, consoleId: value, playedAt: null }));
+    if (onConsoleSelect) onConsoleSelect(value || null);
     if (game.title.length > 0) {
       triggerSearch(game.title, value);
     }
@@ -338,7 +340,7 @@ function GameForm({ onGameAdded, getHeaders }) {
             const selected = consoles.find(c => String(c.id) === game.consoleId);
             return selected ? (
               <>
-                {selected.image && <img src={selected.image} alt="" className="console-dropdown-selected-img" />}
+                <ConsoleImage console={selected} className="console-dropdown-selected-img" />
                 <span>{selected.name}</span>
               </>
             ) : <span>Seleccionar consola</span>;
@@ -367,7 +369,7 @@ function GameForm({ onGameAdded, getHeaders }) {
                   setConsoleDropdownOpen(false);
                 }}
               >
-                {c.image && <img src={c.image} alt="" className="console-dropdown-item-img" />}
+                <ConsoleImage console={c} className="console-dropdown-item-img" />
                 <span>{c.name}</span>
               </button>
             ))}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
+import ConsoleImage from './ConsoleImage';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated }) {
+function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated, onConsoleSelect }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [deleting, setDeleting] = useState(null);
@@ -50,6 +51,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({});
+    if (onConsoleSelect) onConsoleSelect(null);
   };
 
   const handleEditChange = (e) => {
@@ -113,6 +115,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
       if (!response.ok) throw new Error('Error al actualizar');
       setEditingId(null);
       setEditForm({});
+      if (onConsoleSelect) onConsoleSelect(null);
       onGameUpdated();
     } catch (err) {
       alert('Error al guardar cambios: ' + err.message);
@@ -228,7 +231,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
                       {editForm.console_id ? (() => {
                         const c = consoles.find(c => String(c.id) === editForm.console_id);
                         return c?.image
-                          ? <img src={c.image} alt="" className="console-edit-trigger-img" />
+                          ? <ConsoleImage console={c} className="console-edit-trigger-img" />
                           : <span className="console-edit-trigger-text">?</span>;
                       })() : <span className="console-edit-trigger-text">?</span>}
                       <span className="console-dropdown-arrow">{consoleDropdownOpen ? '▲' : '▼'}</span>
@@ -243,9 +246,10 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
                             onClick={() => {
                               handleEditChange({ target: { name: 'console_id', value: String(c.id) } });
                               setConsoleDropdownOpen(false);
+                              if (onConsoleSelect) onConsoleSelect(c.id);
                             }}
                           >
-                            {c.image && <img src={c.image} alt="" className="console-dropdown-item-img" />}
+                            <ConsoleImage console={c} className="console-dropdown-item-img" />
                             <span>{c.name}</span>
                           </button>
                         ))}

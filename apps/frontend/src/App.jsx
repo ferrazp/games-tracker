@@ -16,6 +16,7 @@ function App() {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [selectedConsoleId, setSelectedConsoleId] = useState(null);
 
   const getHeaders = useCallback(() => {
     const headers = { 'Content-Type': 'application/json' };
@@ -62,7 +63,7 @@ function App() {
   if (!token) {
     return (
       <>
-        <SidePanels />
+        <SidePanels consoleId={selectedConsoleId} />
         <Login onLogin={handleLogin} />
       </>
     );
@@ -70,7 +71,7 @@ function App() {
 
   return (
     <div className="App">
-      <SidePanels />
+      <SidePanels consoleId={selectedConsoleId} />
       <div className="app-header">
         <h1>Registro de Juegos</h1>
         <div className="app-header-right">
@@ -81,7 +82,7 @@ function App() {
         </div>
         </div>
       </div>
-      <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} />
+      <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
       <GameList
         games={games}
         loading={loading}
@@ -91,6 +92,7 @@ function App() {
         onGameUpdated={handleGameUpdated}
         getHeaders={getHeaders}
         isAuthenticated={!!token}
+        onConsoleSelect={setSelectedConsoleId}
       />
     </div>
   );
