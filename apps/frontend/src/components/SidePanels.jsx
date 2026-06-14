@@ -1,15 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
 
 function SidePanels({ consoleId }) {
   const [covers, setCovers] = useState([]);
+  const cacheRef = useRef({});
 
   useEffect(() => {
+    const key = consoleId ?? '';
     let cancelled = false;
+
+    if (cacheRef.current[key]) {
+      setCovers(cacheRef.current[key]);
+    }
+
     const params = consoleId ? `?console_id=${consoleId}` : '';
     fetch(`${API_URL}/covers/random${params}`)
       .then(r => r.json())
-      .then(data => { if (!cancelled) setCovers(data.covers || []); })
+      .then(data => {
+        if (!cancelled) {
+          const c = data.covers || [];
+          cacheRef.current[key] = c;
+          setCovers(c);
+        }
+      })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [consoleId]);
