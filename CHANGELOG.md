@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v1.4.0-dev.0
+
+### Changed
+- Limpieza general de documentación: perfiles de ambiente claros, sincronización dev/prod
+- Puerto frontend producción movido de 80 → 9090
+- Frontend-prod ahora usa `nginx.prod.conf` con upstream `backend-prod:4000`
+
 ## [v1.3.0] - 2026-06-14
 
 ### Added
