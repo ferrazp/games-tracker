@@ -66,6 +66,7 @@ class SQLiteClient {
       );
       CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title);
       CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name);
+      CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != '';
       CREATE TABLE IF NOT EXISTS _migrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
@@ -118,6 +119,12 @@ class SQLiteClient {
 
     await new Promise((resolve) => {
       this.db.run("ALTER TABLE consoles ADD COLUMN image TEXT", (err) => {
+        resolve();
+      });
+    });
+
+    await new Promise((resolve) => {
+      this.db.run("ALTER TABLE consoles ADD COLUMN image_type TEXT", (err) => {
         resolve();
       });
     });
@@ -264,6 +271,7 @@ class PostgreSQLClient {
 
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title)`);
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name)`);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != ''`);
 
       await this.pool.query(`
         CREATE TABLE IF NOT EXISTS _migrations (
@@ -282,6 +290,7 @@ class PostgreSQLClient {
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS release_year INTEGER`);
 
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image TEXT`);
+      await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image_type VARCHAR(20) DEFAULT 'bitmap'`);
 
       await this.pool.query(`DROP VIEW IF EXISTS games_view CASCADE`);
 

@@ -68,4 +68,5 @@ See su [📖 AGENTS.md](../../games-tracker/AGENTS.md) para detalles.
 **Modo BD por Defecto**: SQLite (desarrollo)  
 **Alternativa**: PostgreSQL (producción)  
 **Package Manager**: npm (instalado) + pnpm (instalado)  
+**Git Flow**: Siempre usar `git flow feature start <name>` para nuevas features. Rama develop como base.  
 **Manual de Operaciones**: See [🐳 DOCKER.md](./docs/DOCKER.md)
