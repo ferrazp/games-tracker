@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - v1.4.0-dev.0
+## [Unreleased] - v1.4.0-dev.1
+
+### Added
+- Filtros en `GET /games`: búsqueda por título (`q`), rango de año jugado (`year_played_from`/`year_played_to`), rango de año completado (`year_completed_from`/`year_completed_to`), ordenamiento (`sort_by`/`sort_order`)
+- Búsqueda online IGDB expande juegos multiplataforma: ahora muestra un resultado por cada plataforma conocida en lugar de solo la primera
+- Filtro exacto por consola en búsqueda online IGDB: filtra por nombre de consola, no solo por plataforma ID
 
 ### Changed
 - Limpieza general de documentación: perfiles de ambiente claros, sincronización dev/prod
