@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - v1.4.0-dev.1
+
+### Added
+- Barra de filtros/búsqueda en la lista de juegos: búsqueda por título, selector de consola con iconos, filtro completado/pendiente, rango de años jugado y completado, ordenamiento
+- Filtro por consola usando solo iconos (sin texto) en la lista de juegos
+
 ## [v1.3.0] - 2026-06-14
 
 ### Performance
