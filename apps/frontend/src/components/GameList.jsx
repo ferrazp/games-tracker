@@ -4,34 +4,59 @@ import ConsoleImage from './ConsoleImage';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated, onConsoleSelect }) {
+function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated, onConsoleSelect, filters, onFilterChange }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [deleting, setDeleting] = useState(null);
   const [saving, setSaving] = useState(null);
   const [consoles, setConsoles] = useState([]);
   const [consoleDropdownOpen, setConsoleDropdownOpen] = useState(false);
+  const [filterConsoleOpen, setFilterConsoleOpen] = useState(false);
+  const filterConsoleRef = useRef(null);
   const fileInputRef = useRef(null);
   const consoleRef = useRef(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetch(`${API_URL}/consoles`)
-        .then(r => r.json())
-        .then(data => setConsoles(data.consoles || []))
-        .catch(() => {});
-    }
-  }, [isAuthenticated]);
+    fetch(`${API_URL}/consoles`)
+      .then(r => r.json())
+      .then(data => setConsoles(data.consoles || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (consoleRef.current && !consoleRef.current.contains(e.target)) {
         setConsoleDropdownOpen(false);
       }
+      if (filterConsoleRef.current && !filterConsoleRef.current.contains(e.target)) {
+        setFilterConsoleOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const updateFilter = (key, value) => {
+    onFilterChange({ ...filters, [key]: value });
+  };
+
+  const clearFilters = () => {
+    onFilterChange({
+      q: '',
+      console_id: '',
+      year_played_from: '',
+      year_played_to: '',
+      year_completed_from: '',
+      year_completed_to: '',
+      completed: '',
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    });
+  };
+
+  const hasActiveFilters = filters.q || filters.console_id || filters.year_played_from || filters.year_played_to ||
+    filters.year_completed_from || filters.year_completed_to || filters.completed ||
+    filters.sort_by !== 'created_at' || filters.sort_order !== 'desc';
 
   const startEdit = (game) => {
     setEditingId(game.id);
@@ -156,10 +181,145 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
   };
 
+  const currentYear = new Date().getFullYear();
+
+  const filterBar = (
+    <div className="game-filters">
+      <div className="game-filters-row">
+        <input
+          type="text"
+          className="game-filter-input"
+          placeholder="Buscar por título..."
+          value={filters.q}
+          onChange={e => updateFilter('q', e.target.value)}
+        />
+        <div className="game-filter-console-wrapper" ref={filterConsoleRef}>
+          <button
+            type="button"
+            className="game-filter-console-btn"
+            onClick={() => setFilterConsoleOpen(!filterConsoleOpen)}
+          >
+            {filters.console_id
+              ? (() => {
+                  const c = consoles.find(c => String(c.id) === filters.console_id);
+                  return c?.image
+                    ? <ConsoleImage console={c} className="console-dropdown-item-img" />
+                    : <span className="console-edit-trigger-text">?</span>;
+                })()
+              : <span className="console-edit-trigger-text">★</span>}
+            <span className="console-dropdown-arrow">{filterConsoleOpen ? '▲' : '▼'}</span>
+          </button>
+          {filterConsoleOpen && (
+            <div className="console-dropdown-panel console-dropdown-panel-icons">
+              <button
+                type="button"
+                className={`console-dropdown-item${!filters.console_id ? ' selected' : ''}`}
+                onClick={() => { updateFilter('console_id', ''); setFilterConsoleOpen(false); }}
+              >
+                <span className="console-dropdown-item-text">Todas</span>
+              </button>
+              {consoles.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`console-dropdown-item${filters.console_id === String(c.id) ? ' selected' : ''}`}
+                  onClick={() => { updateFilter('console_id', String(c.id)); setFilterConsoleOpen(false); }}
+                >
+                  <ConsoleImage console={c} className="console-dropdown-item-img" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <select
+          className="game-filter-select"
+          value={filters.completed}
+          onChange={e => updateFilter('completed', e.target.value)}
+        >
+          <option value="">Todos</option>
+          <option value="true">Completado</option>
+          <option value="false">Pendiente</option>
+        </select>
+      </div>
+      <div className="game-filters-row">
+        <div className="game-filter-range">
+          <span className="game-filter-range-label">Jugado:</span>
+          <input
+            type="number"
+            className="game-filter-year"
+            placeholder="Desde"
+            value={filters.year_played_from}
+            onChange={e => updateFilter('year_played_from', e.target.value)}
+            min="1950"
+            max={currentYear}
+          />
+          <span className="game-filter-range-sep">-</span>
+          <input
+            type="number"
+            className="game-filter-year"
+            placeholder="Hasta"
+            value={filters.year_played_to}
+            onChange={e => updateFilter('year_played_to', e.target.value)}
+            min="1950"
+            max={currentYear}
+          />
+        </div>
+        <div className="game-filter-range">
+          <span className="game-filter-range-label">Completado:</span>
+          <input
+            type="number"
+            className="game-filter-year"
+            placeholder="Desde"
+            value={filters.year_completed_from}
+            onChange={e => updateFilter('year_completed_from', e.target.value)}
+            min="1950"
+            max={currentYear}
+          />
+            <span className="game-filter-range-sep">-</span>
+            <input
+              type="number"
+              className="game-filter-year"
+              placeholder="Hasta"
+              value={filters.year_completed_to}
+              onChange={e => updateFilter('year_completed_to', e.target.value)}
+              min="1950"
+              max={currentYear}
+            />
+          </div>
+          <select
+            className="game-filter-select game-filter-sort"
+            value={filters.sort_by}
+            onChange={e => updateFilter('sort_by', e.target.value)}
+          >
+            <option value="created_at">Fecha creado</option>
+            <option value="title">Título</option>
+            <option value="year_played">Año jugado</option>
+            <option value="year_completed">Año completado</option>
+            <option value="hours_played">Horas</option>
+            <option value="release_year">Año lanzamiento</option>
+          </select>
+          <button
+            type="button"
+            className="game-filter-order-btn"
+            onClick={() => updateFilter('sort_order', filters.sort_order === 'asc' ? 'desc' : 'asc')}
+            title={filters.sort_order === 'asc' ? 'Ascendente' : 'Descendente'}
+          >
+            {filters.sort_order === 'asc' ? '↑' : '↓'}
+          </button>
+          {hasActiveFilters && (
+            <button type="button" className="game-filter-clear" onClick={clearFilters}>
+              Limpiar
+            </button>
+          )}
+        </div>
+      </div>
+  );
+
   if (loading) {
     return (
       <div className="game-list">
         <h2>Lista de Juegos</h2>
+        {filterBar}
         <p className="status-message">Cargando juegos...</p>
       </div>
     );
@@ -169,6 +329,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     return (
       <div className="game-list">
         <h2>Lista de Juegos</h2>
+        {filterBar}
         <p className="status-message error">Error: {error}</p>
         <button onClick={onRefresh} className="btn btn-secondary">Reintentar</button>
       </div>
@@ -179,6 +340,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
     return (
       <div className="game-list">
         <h2>Lista de Juegos</h2>
+        {filterBar}
         <p className="status-message empty">No hay juegos registrados aún. Agregá uno arriba.</p>
       </div>
     );
@@ -187,6 +349,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
   return (
     <div className="game-list">
       <h2>Lista de Juegos ({games.length})</h2>
+      {filterBar}
       {games.map(game => (
         <div key={game.id} className="game-card">
           {editingId === game.id ? (

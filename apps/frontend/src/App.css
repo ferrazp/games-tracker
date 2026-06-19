@@ -413,6 +413,32 @@ form {
   min-width: 180px;
 }
 
+.console-dropdown-panel-icons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  min-width: 160px;
+}
+
+.console-dropdown-panel-icons .console-dropdown-item {
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.console-dropdown-panel-icons .console-dropdown-item-img {
+  width: 32px;
+  height: 32px;
+}
+
+.console-dropdown-panel-icons .console-dropdown-item-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
 
 
 .search-result-item {
@@ -592,6 +618,173 @@ form > button[type="submit"]:disabled {
   background: rgba(231, 76, 60, 0.15);
   color: #ff6b6b;
   border: 1px solid rgba(231, 76, 60, 0.25);
+}
+
+/* ===== GAME FILTERS ===== */
+.game-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.game-filters-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.game-filter-input {
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.game-filter-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.game-filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.game-filter-console-wrapper {
+  position: relative;
+}
+
+.game-filter-console-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+
+.game-filter-console-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.game-filter-select {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.game-filter-select option {
+  background: #24243e;
+  color: #fff;
+}
+
+.game-filter-select:focus {
+  border-color: #667eea;
+}
+
+.game-filter-sort {
+  min-width: 100px;
+}
+
+.game-filter-range {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.game-filter-range-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.game-filter-year {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.game-filter-year:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+.game-filter-year::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+}
+
+.game-filter-range-sep {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+.game-filter-order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.game-filter-order-btn:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.game-filter-clear {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(231, 76, 60, 0.12);
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.game-filter-clear:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.3);
 }
 
 /* ===== GAME LIST ===== */
