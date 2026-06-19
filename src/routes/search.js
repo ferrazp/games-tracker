@@ -143,6 +143,7 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
     const sanitizedQuery = query.replace(/"/g, '\\"');
 
     let platformFilter = '';
+    let filterConsoleName = null;
     if (console_id) {
       const db = getDatabase();
       const consoleQuery = DB_TYPE === 'sqlite'
@@ -150,9 +151,9 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
         : 'SELECT name FROM consoles WHERE id = $1';
       const consoleResult = await db.query(consoleQuery, [parseInt(console_id)]);
       if (consoleResult.rows.length > 0) {
-        const consoleName = consoleResult.rows[0].name;
+        filterConsoleName = consoleResult.rows[0].name;
         const platformIds = Object.entries(IGDB_PLATFORM_TO_CONSOLE)
-          .filter(([, name]) => name === consoleName)
+          .filter(([, name]) => name === filterConsoleName)
           .map(([id]) => id);
         if (platformIds.length > 0) {
           platformFilter = ` where platforms = (${platformIds.join(',')});`;
@@ -179,17 +180,27 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
       return res.json({ results: [], source: 'online' });
     }
 
-    const igdbGames = data.map(g => {
-      const platform = Array.isArray(g.platforms) ? g.platforms[0] : null;
-      const mappedName = platform ? IGDB_PLATFORM_TO_CONSOLE[platform.id] : null;
-      return {
+    const igdbGames = data.flatMap(g => {
+      const platforms = Array.isArray(g.platforms) ? g.platforms : [];
+      const mapped = platforms.filter(p => IGDB_PLATFORM_TO_CONSOLE[p.id]);
+      if (mapped.length === 0) {
+        return [{
+          igdb_id: g.id,
+          name: g.name,
+          cover_url: g.cover?.url || null,
+          console_name: null,
+          platform_name: platforms[0]?.name || null,
+          release_date: g.first_release_date || null
+        }];
+      }
+      return mapped.map(p => ({
         igdb_id: g.id,
         name: g.name,
         cover_url: g.cover?.url || null,
-        console_name: mappedName,
-        platform_name: platform?.name || null,
+        console_name: IGDB_PLATFORM_TO_CONSOLE[p.id],
+        platform_name: p.name || null,
         release_date: g.first_release_date || null
-      };
+      }));
     });
 
     const newGames = await persistToCatalog(igdbGames);
@@ -234,8 +245,8 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
       first_release_date: g.release_date
     }));
 
-    if (console_id) {
-      results = results.filter(g => g.console_name);
+    if (filterConsoleName) {
+      results = results.filter(g => g.console_name === filterConsoleName);
     }
 
     res.json({ results, source: 'online' });

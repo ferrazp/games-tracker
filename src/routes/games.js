@@ -26,6 +26,8 @@ async function fetchGameById(db, id) {
   return result.rows[0] || null;
 }
 
+const ALLOWED_SORT_FIELDS = ['title', 'year_played', 'year_completed', 'created_at', 'updated_at', 'hours_played', 'release_year'];
+
 router.get('/games', async (req, res) => {
   try {
     const db = getDatabase();
@@ -58,8 +60,53 @@ router.get('/games', async (req, res) => {
       conditions.push(`g.title ${likeOp} ${pushParam(`%${req.query.q}%`)}`);
     }
 
+    if (req.query.year_played) {
+      const yp = parseInt(req.query.year_played);
+      if (!isNaN(yp)) {
+        conditions.push(`g.year_played = ${pushParam(yp)}`);
+      }
+    } else {
+      if (req.query.year_played_from) {
+        const ypf = parseInt(req.query.year_played_from);
+        if (!isNaN(ypf)) {
+          conditions.push(`g.year_played >= ${pushParam(ypf)}`);
+        }
+      }
+      if (req.query.year_played_to) {
+        const ypt = parseInt(req.query.year_played_to);
+        if (!isNaN(ypt)) {
+          conditions.push(`g.year_played <= ${pushParam(ypt)}`);
+        }
+      }
+    }
+
+    if (req.query.year_completed) {
+      const yc = parseInt(req.query.year_completed);
+      if (!isNaN(yc)) {
+        conditions.push(`g.year_completed = ${pushParam(yc)}`);
+      }
+    } else {
+      if (req.query.year_completed_from) {
+        const ycf = parseInt(req.query.year_completed_from);
+        if (!isNaN(ycf)) {
+          conditions.push(`g.year_completed >= ${pushParam(ycf)}`);
+        }
+      }
+      if (req.query.year_completed_to) {
+        const yct = parseInt(req.query.year_completed_to);
+        if (!isNaN(yct)) {
+          conditions.push(`g.year_completed <= ${pushParam(yct)}`);
+        }
+      }
+    }
+
+    const sortBy = ALLOWED_SORT_FIELDS.includes(req.query.sort_by) ? req.query.sort_by : 'created_at';
+    const sortOrder = req.query.sort_order === 'asc' ? 'ASC' : 'DESC';
+    const orderClause = isSQLite
+      ? `ORDER BY g.${sortBy} ${sortOrder}`
+      : `ORDER BY g.${sortBy} ${sortOrder} NULLS LAST`;
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const orderClause = isSQLite ? 'ORDER BY g.created_at DESC' : 'ORDER BY g.created_at DESC NULLS LAST';
 
     const selectSQL = `
       SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, g.release_year,
