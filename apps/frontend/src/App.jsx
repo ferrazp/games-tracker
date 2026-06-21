@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GameForm from './components/GameForm';
 import GameList from './components/GameList';
+import Wishlist from './components/Wishlist';
 import Login from './components/Login';
 import VersionBadge from './components/VersionBadge';
 import SidePanels from './components/SidePanels';
@@ -30,6 +31,7 @@ function App() {
   });
   const [selectedConsoleId, setSelectedConsoleId] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [showWishlist, setShowWishlist] = useState(false);
 
   const getHeaders = useCallback(() => {
     const headers = { 'Content-Type': 'application/json' };
@@ -114,20 +116,42 @@ function App() {
         </div>
         </div>
       </div>
-      <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
-      <GameList
-        games={games}
-        loading={loading}
-        error={error}
-        onRefresh={loadGames}
-        onGameDeleted={handleGameDeleted}
-        onGameUpdated={handleGameUpdated}
-        getHeaders={getHeaders}
-        isAuthenticated={!!token}
-        onConsoleSelect={setSelectedConsoleId}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-      />
+      <div className="app-tabs">
+        <button
+          type="button"
+          className={`app-tab ${!showWishlist ? 'active' : ''}`}
+          onClick={() => setShowWishlist(false)}
+        >
+          Lista de Juegos
+        </button>
+        <button
+          type="button"
+          className={`app-tab ${showWishlist ? 'active' : ''}`}
+          onClick={() => setShowWishlist(true)}
+        >
+          Próximos Juegos
+        </button>
+      </div>
+      {showWishlist ? (
+        <Wishlist getHeaders={getHeaders} />
+      ) : (
+        <>
+          <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
+          <GameList
+            games={games}
+            loading={loading}
+            error={error}
+            onRefresh={loadGames}
+            onGameDeleted={handleGameDeleted}
+            onGameUpdated={handleGameUpdated}
+            getHeaders={getHeaders}
+            isAuthenticated={!!token}
+            onConsoleSelect={setSelectedConsoleId}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
+        </>
+      )}
     </div>
   );
 }
