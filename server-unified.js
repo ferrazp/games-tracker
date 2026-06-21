@@ -11,6 +11,7 @@ import consolesRouter from './src/routes/consoles.js';
 import searchRouter from './src/routes/search.js';
 import statsRouter from './src/routes/stats.js';
 import coversRouter from './src/routes/covers.js';
+import wishlistRouter from './src/routes/wishlist.js';
 
 const app = express();
 const port = config.server.port;
@@ -30,6 +31,7 @@ app.use(consolesRouter);
 app.use(searchRouter);
 app.use(statsRouter);
 app.use(coversRouter);
+app.use(wishlistRouter);
 
 app.use(errorHandler);
 app.use(notFound);

@@ -138,6 +138,49 @@ ORDER BY g.created_at DESC;
 
 ---
 
+### Tabla: `game_wishlist`
+
+```sql
+CREATE TABLE game_wishlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- SQLite
+    -- id SERIAL PRIMARY KEY,              -- PostgreSQL
+    game_catalog_id INTEGER NOT NULL REFERENCES game_catalog(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+| Campo | Tipo | Constraints | Descripción |
+|-------|------|-------------|-------------|
+| `id` | INTEGER/SERIAL | PRIMARY KEY | ID único |
+| `game_catalog_id` | INTEGER | NOT NULL, FK → game_catalog(id) ON DELETE CASCADE | ID del juego en catálogo |
+| `sort_order` | INTEGER | NOT NULL, DEFAULT 0 | Orden manual para reordenar |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Fecha creación |
+| `updated_at` | TIMESTAMP | DEFAULT NOW() | Fecha actualización |
+
+---
+
+### Índices
+
+```sql
+-- Tabla games
+CREATE INDEX idx_games_console_id ON games(console_id);
+CREATE INDEX idx_games_title ON games(title);
+CREATE INDEX idx_games_completed ON games(completed);
+
+-- Tabla game_catalog
+CREATE INDEX idx_catalog_title ON game_catalog(title);
+CREATE INDEX idx_catalog_console ON game_catalog(console_name);
+CREATE INDEX idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != '';
+
+-- Tabla game_wishlist
+CREATE INDEX idx_wishlist_sort_order ON game_wishlist(sort_order);
+CREATE INDEX idx_wishlist_catalog_id ON game_wishlist(game_catalog_id);
+```
+
+---
+
 ### Relaciones
 
 ```
@@ -173,16 +216,30 @@ ORDER BY g.created_at DESC;
 └─────────────────────────┘
       (soft constraint)
 
-┌─────────────────────────┐
-│      game_catalog       │  ← independiente
-├─────────────────────────┤
-│ id (PK)                 │
-│ igdb_id (UNIQUE)        │
-│ title                   │
-│ console_name (texto)    │
-│ cover_url               │
-│ rating                  │
-│ release_date            │
-│ created_at              │
-└─────────────────────────┘
+┌──────────────────────────────┐
+│        game_catalog          │
+├──────────────────────────────┤
+│ id (PK)                      │
+│ igdb_id (UNIQUE)             │
+│ title                        │
+│ console_name (texto)         │
+│ cover_url                    │
+│ rating                       │
+│ release_date                 │
+│ created_at                   │
+└──────────┬───────────────────┘
+           │
+           │ 1:N
+           │ (ON DELETE CASCADE)
+           │
+           ▼
+┌──────────────────────────────┐
+│        game_wishlist         │
+├──────────────────────────────┤
+│ id (PK)                      │
+│ game_catalog_id (FK) ────────┘
+│ sort_order
+│ created_at
+│ updated_at
+└──────────────────────────────┘
 ```

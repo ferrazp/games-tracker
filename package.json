@@ -1,6 +1,6 @@
 {
   "name": "games-backend",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Games Tracker Backend - API REST para seguimiento de videojuegos con soporte dual SQLite/PostgreSQL",
   "main": "server-unified.js",
   "engines": {

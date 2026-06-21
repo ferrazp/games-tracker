@@ -291,3 +291,107 @@ Content-Type: application/json
 - `400 Bad Request`: Query inválido o credenciales Twitch no configuradas
 - `429 Too Many Requests`: Se excedió el límite de rate (30/min)
 - `500 Server Error`: Error de Twitch API
+
+---
+
+### Próximos Juegos (Wishlist)
+
+Requiere autenticación JWT (Bearer token) en todos los endpoints.
+
+#### Listar próximos juegos
+
+```http
+GET /wishlist
+Authorization: Bearer <token>
+```
+
+**Response**: `200 OK`
+```json
+{
+  "games": [
+    {
+      "id": 1,
+      "game_catalog_id": 123,
+      "sort_order": 0,
+      "title": "The Legend of Zelda: Breath of the Wild",
+      "console_name": "Nintendo Switch",
+      "cover_url": "data:image/jpeg;base64,...",
+      "created_at": "2026-06-21T12:00:00.000Z",
+      "updated_at": "2026-06-21T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Agregar juego a la lista
+
+```http
+POST /wishlist
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "game_catalog_id": 123
+}
+```
+
+**Response**: `201 Created`
+```json
+{
+  "message": "Game added to wishlist",
+  "game": { /* objeto completo */ },
+  "success": true
+}
+```
+
+**Errores**:
+- `400 Bad Request`: `game_catalog_id` faltante, inválido o no existe en catálogo
+- `409 Conflict`: El juego ya está en la wishlist
+
+#### Reordenar la lista
+
+```http
+PUT /wishlist/reorder
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "items": [
+    { "id": 2, "sort_order": 0 },
+    { "id": 1, "sort_order": 1 },
+    { "id": 3, "sort_order": 2 }
+  ]
+}
+```
+
+**Response**: `200 OK`
+```json
+{
+  "message": "Wishlist reordered successfully",
+  "games": [ /* lista completa ordenada */ ],
+  "success": true
+}
+```
+
+**Errores**:
+- `400 Bad Request`: `items` inválido o mal formado
+
+#### Eliminar juego de la lista
+
+```http
+DELETE /wishlist/:id
+Authorization: Bearer <token>
+```
+
+**Response**: `200 OK`
+```json
+{
+  "message": "Game removed from wishlist",
+  "id": 1,
+  "success": true
+}
+```
+
+**Errores**:
+- `400 Bad Request`: id inválido
+- `404 Not Found`: el item no existe
