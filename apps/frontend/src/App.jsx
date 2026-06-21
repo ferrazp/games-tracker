@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GameForm from './components/GameForm';
 import GameList from './components/GameList';
+import Wishlist from './components/Wishlist';
 import Login from './components/Login';
 import VersionBadge from './components/VersionBadge';
 import SidePanels from './components/SidePanels';
 import API_URL from './config';
 import './App.css';
+
+const DEFAULT_FILTERS = {
+  q: '',
+  console_id: '',
+  year_played_from: '',
+  year_played_to: '',
+  year_completed_from: '',
+  year_completed_to: '',
+  completed: '',
+  sort_by: 'created_at',
+  sort_order: 'desc'
+};
 
 function App() {
   const [games, setGames] = useState([]);
@@ -17,6 +30,8 @@ function App() {
     return saved ? JSON.parse(saved) : null;
   });
   const [selectedConsoleId, setSelectedConsoleId] = useState(null);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [showWishlist, setShowWishlist] = useState(false);
 
   const getHeaders = useCallback(() => {
     const headers = { 'Content-Type': 'application/json' };
@@ -24,10 +39,25 @@ function App() {
     return headers;
   }, [token]);
 
-  const loadGames = useCallback(async () => {
+  const buildQueryString = useCallback((f) => {
+    const params = new URLSearchParams();
+    if (f) {
+      Object.entries(f).forEach(([key, val]) => {
+        if (val !== '' && val !== null && val !== undefined) {
+          params.set(key, val);
+        }
+      });
+    }
+    return params.toString();
+  }, []);
+
+  const loadGames = useCallback(async (filtersToUse) => {
     try {
       setError(null);
-      const response = await fetch(`${API_URL}/games`);
+      setLoading(true);
+      const qs = buildQueryString(filtersToUse);
+      const url = `${API_URL}/games${qs ? '?' + qs : ''}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Error al cargar juegos');
       const data = await response.json();
       setGames(data.games || []);
@@ -36,11 +66,15 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [buildQueryString]);
 
   useEffect(() => {
-    loadGames();
-  }, [loadGames]);
+    loadGames(filters);
+  }, [filters, loadGames]);
+
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+  }, []);
 
   const handleLogin = (newToken, newUser) => {
     setToken(newToken);
@@ -56,9 +90,9 @@ function App() {
     localStorage.removeItem('user');
   };
 
-  const handleGameDeleted = () => loadGames();
-  const handleGameUpdated = () => loadGames();
-  const handleGameAdded = () => loadGames();
+  const handleGameDeleted = () => loadGames(filters);
+  const handleGameUpdated = () => loadGames(filters);
+  const handleGameAdded = () => loadGames(filters);
 
   if (!token) {
     return (
@@ -82,18 +116,42 @@ function App() {
         </div>
         </div>
       </div>
-      <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
-      <GameList
-        games={games}
-        loading={loading}
-        error={error}
-        onRefresh={loadGames}
-        onGameDeleted={handleGameDeleted}
-        onGameUpdated={handleGameUpdated}
-        getHeaders={getHeaders}
-        isAuthenticated={!!token}
-        onConsoleSelect={setSelectedConsoleId}
-      />
+      <div className="app-tabs">
+        <button
+          type="button"
+          className={`app-tab ${!showWishlist ? 'active' : ''}`}
+          onClick={() => setShowWishlist(false)}
+        >
+          Lista de Juegos
+        </button>
+        <button
+          type="button"
+          className={`app-tab ${showWishlist ? 'active' : ''}`}
+          onClick={() => setShowWishlist(true)}
+        >
+          Próximos Juegos
+        </button>
+      </div>
+      {showWishlist ? (
+        <Wishlist getHeaders={getHeaders} />
+      ) : (
+        <>
+          <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
+          <GameList
+            games={games}
+            loading={loading}
+            error={error}
+            onRefresh={loadGames}
+            onGameDeleted={handleGameDeleted}
+            onGameUpdated={handleGameUpdated}
+            getHeaders={getHeaders}
+            isAuthenticated={!!token}
+            onConsoleSelect={setSelectedConsoleId}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
+        </>
+      )}
     </div>
   );
 }
