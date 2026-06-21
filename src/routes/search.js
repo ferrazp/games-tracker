@@ -94,13 +94,13 @@ router.post('/search', async (req, res) => {
     let params;
     if (consoleName) {
       searchSQL = DB_TYPE === 'sqlite'
-        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? AND console_name = ? ORDER BY rating DESC LIMIT 10`
-        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 AND console_name = $2 ORDER BY rating DESC NULLS LAST LIMIT 10`;
+        ? `SELECT id as catalog_id, igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? AND console_name = ? ORDER BY rating DESC LIMIT 10`
+        : `SELECT id as catalog_id, igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 AND console_name = $2 ORDER BY rating DESC NULLS LAST LIMIT 10`;
       params = [searchPattern, consoleName];
     } else {
       searchSQL = DB_TYPE === 'sqlite'
-        ? `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? ORDER BY rating DESC LIMIT 10`
-        : `SELECT igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 ORDER BY rating DESC NULLS LAST LIMIT 10`;
+        ? `SELECT id as catalog_id, igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title LIKE ? ORDER BY rating DESC LIMIT 10`
+        : `SELECT id as catalog_id, igdb_id as id, title as name, console_name, cover_url, rating, release_date FROM game_catalog WHERE title ILIKE $1 ORDER BY rating DESC NULLS LAST LIMIT 10`;
       params = [searchPattern];
     }
 
@@ -108,6 +108,7 @@ router.post('/search', async (req, res) => {
 
     const games = result.rows.map(g => ({
       id: g.id,
+      catalog_id: g.catalog_id,
       name: g.name,
       console_name: g.console_name,
       cover: g.cover_url ? { url: g.cover_url } : null,
@@ -138,6 +139,7 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
       return res.status(400).json({ error: validation.error });
     }
 
+    const db = getDatabase();
     const accessToken = await getTwitchToken();
 
     const sanitizedQuery = query.replace(/"/g, '\\"');
@@ -145,7 +147,6 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
     let platformFilter = '';
     let filterConsoleName = null;
     if (console_id) {
-      const db = getDatabase();
       const consoleQuery = DB_TYPE === 'sqlite'
         ? 'SELECT name FROM consoles WHERE id = ?'
         : 'SELECT name FROM consoles WHERE id = $1';
@@ -238,6 +239,7 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
 
     let results = igdbGames.map(g => ({
       id: g.igdb_id,
+      catalog_id: null,
       name: g.name,
       cover: g.cover_url ? { url: g.cover_url.replace('/t_thumb/', '/t_cover_big/') } : null,
       console_name: g.console_name,
@@ -247,6 +249,17 @@ router.post('/search/online', searchOnlineLimiter, async (req, res) => {
 
     if (filterConsoleName) {
       results = results.filter(g => g.console_name === filterConsoleName);
+    }
+
+    const igdbIds = results.map(r => r.id);
+    if (igdbIds.length > 0) {
+      const catPlaceholders = igdbIds.map((_, i) => DB_TYPE === 'sqlite' ? '?' : `$${i + 1}`).join(',');
+      const catQuery = DB_TYPE === 'sqlite'
+        ? `SELECT id, igdb_id FROM game_catalog WHERE igdb_id IN (${catPlaceholders})`
+        : `SELECT id, igdb_id FROM game_catalog WHERE igdb_id IN (${catPlaceholders})`;
+      const catResult = await db.query(catQuery, igdbIds);
+      const catalogMap = Object.fromEntries(catResult.rows.map(r => [r.igdb_id, r.id]));
+      results = results.map(r => ({ ...r, catalog_id: catalogMap[r.id] || null }));
     }
 
     res.json({ results, source: 'online' });

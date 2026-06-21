@@ -72,6 +72,16 @@ class SQLiteClient {
         name TEXT NOT NULL UNIQUE,
         applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS game_wishlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_catalog_id INTEGER NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (game_catalog_id) REFERENCES game_catalog(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_wishlist_sort_order ON game_wishlist(sort_order);
+      CREATE INDEX IF NOT EXISTS idx_wishlist_catalog_id ON game_wishlist(game_catalog_id);
     `;
 
     await new Promise((resolve, reject) => {
@@ -280,6 +290,19 @@ class PostgreSQLClient {
           applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS game_wishlist (
+          id SERIAL PRIMARY KEY,
+          game_catalog_id INTEGER NOT NULL REFERENCES game_catalog(id) ON DELETE CASCADE,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_wishlist_sort_order ON game_wishlist(sort_order)`);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_wishlist_catalog_id ON game_wishlist(game_catalog_id)`);
 
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS launch_year INTEGER`);
 

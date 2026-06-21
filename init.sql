@@ -37,6 +37,15 @@ CREATE TABLE IF NOT EXISTS game_catalog (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Crear tabla de wishlist (próximos juegos a jugar)
+CREATE TABLE IF NOT EXISTS game_wishlist (
+    id SERIAL PRIMARY KEY,
+    game_catalog_id INTEGER NOT NULL REFERENCES game_catalog(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Crear índices para mejora de performance
 CREATE INDEX IF NOT EXISTS idx_games_console_id ON games(console_id);
 CREATE INDEX IF NOT EXISTS idx_games_title ON games(title);
@@ -46,6 +55,10 @@ CREATE INDEX IF NOT EXISTS idx_games_completed ON games(completed);
 CREATE INDEX IF NOT EXISTS idx_catalog_title ON game_catalog(title);
 CREATE INDEX IF NOT EXISTS idx_catalog_console ON game_catalog(console_name);
 CREATE INDEX IF NOT EXISTS idx_catalog_console_cover ON game_catalog(console_name) WHERE cover_url IS NOT NULL AND cover_url != '';
+
+-- Índices para wishlist
+CREATE INDEX IF NOT EXISTS idx_wishlist_sort_order ON game_wishlist(sort_order);
+CREATE INDEX IF NOT EXISTS idx_wishlist_catalog_id ON game_wishlist(game_catalog_id);
 
 -- Insertar consolas en orden de salida
 INSERT INTO consoles (name, launch_year) VALUES
