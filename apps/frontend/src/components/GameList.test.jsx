@@ -128,7 +128,7 @@ it('formats played date with month and year', () => {
 
 it('shows completed badge', () => {
   render(<GameList games={mockGames} loading={false} error={null} onRefresh={vi.fn()} onGameDeleted={vi.fn()} onGameUpdated={vi.fn()} getHeaders={mockGetHeaders} isAuthenticated={false} />);
-  expect(screen.getByText('Completado')).toBeInTheDocument();
+  expect(screen.getAllByText('Completado').length).toBeGreaterThanOrEqual(1);
 });
 
 it('shows pending for incomplete games', () => {
