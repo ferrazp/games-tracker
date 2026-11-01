@@ -240,6 +240,16 @@ router.put('/games/:id', requireJWT, async (req, res) => {
 
     const data = parseGameData(req.body);
 
+    const existing = await fetchGameById(db, id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    // release_year viene del catálogo y el formulario de edición no lo envía:
+    // si no está en el body se conserva el valor guardado (null explícito lo limpia).
+    if (req.body.release_year === undefined) {
+      data.release_year = existing.release_year ?? null;
+    }
+
     if (data.console_id) {
       const consoleQuery = DB_TYPE === 'sqlite'
         ? 'SELECT launch_year FROM consoles WHERE id = ?'
