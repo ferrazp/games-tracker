@@ -152,22 +152,14 @@ router.put('/wishlist/reorder', requireJWT, async (req, res) => {
 
     const db = getDatabase();
 
-    if (DB_TYPE === 'sqlite') {
-      await db.query('BEGIN');
-      try {
-        for (const item of items) {
-          await db.query('UPDATE game_wishlist SET sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [item.sort_order, item.id]);
-        }
-        await db.query('COMMIT');
-      } catch (err) {
-        await db.query('ROLLBACK');
-        throw err;
-      }
-    } else {
+    const updateSQL = DB_TYPE === 'sqlite'
+      ? 'UPDATE game_wishlist SET sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      : 'UPDATE game_wishlist SET sort_order = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
+    await db.transaction(async (tx) => {
       for (const item of items) {
-        await db.query('UPDATE game_wishlist SET sort_order = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [item.sort_order, item.id]);
+        await tx.query(updateSQL, [item.sort_order, item.id]);
       }
-    }
+    });
 
     const query = DB_TYPE === 'sqlite'
       ? `SELECT w.id, w.game_catalog_id, w.sort_order, c.title, c.console_name, c.cover_url, w.created_at, w.updated_at

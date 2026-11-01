@@ -202,6 +202,27 @@ class SQLiteClient {
     });
   }
 
+  /**
+   * Ejecuta fn(tx) dentro de BEGIN/COMMIT (ROLLBACK si fn falla).
+   * SQLite usa una sola conexión: las transacciones se encolan para no anidarse.
+   */
+  async transaction(fn) {
+    const run = async () => {
+      await this.query('BEGIN');
+      try {
+        const result = await fn(this);
+        await this.query('COMMIT');
+        return result;
+      } catch (err) {
+        await this.query('ROLLBACK');
+        throw err;
+      }
+    };
+    const next = (this.txQueue || Promise.resolve()).then(run, run);
+    this.txQueue = next.catch(() => {});
+    return next;
+  }
+
   async close() {
     return new Promise((resolve, reject) => {
       if (this.db) {
@@ -383,6 +404,25 @@ class PostgreSQLClient {
     return this.pool.query(sql, params);
   }
 
+  /**
+   * Ejecuta fn(tx) dentro de BEGIN/COMMIT sobre UNA conexión dedicada del pool
+   * (pool.query puede usar una conexión distinta en cada llamada).
+   */
+  async transaction(fn) {
+    const conn = await this.pool.connect();
+    try {
+      await conn.query('BEGIN');
+      const result = await fn({ query: (sql, params = []) => conn.query(sql, params) });
+      await conn.query('COMMIT');
+      return result;
+    } catch (err) {
+      await conn.query('ROLLBACK');
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
   async close() {
     if (this.pool) {
       await this.pool.end();
@@ -417,4 +457,4 @@ export async function closeDatabase() {
   }
 }
 
-export { DB_TYPE };
+export { DB_TYPE, SQLiteClient, PostgreSQLClient };

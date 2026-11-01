@@ -182,15 +182,14 @@ async function seedCatalog() {
         ? 'INSERT OR IGNORE INTO game_catalog (igdb_id, title, console_name, cover_url, rating, release_date) VALUES (?, ?, ?, ?, ?, ?)'
         : 'INSERT INTO game_catalog (igdb_id, title, console_name, cover_url, rating, release_date) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (igdb_id) DO NOTHING';
 
-      await db.query('BEGIN');
       let inserted = 0;
-      for (const game of newGames) {
-        try {
+      await db.transaction(async (tx) => {
+        for (const game of newGames) {
           const coverValue = withImages && game._coverBase64
             ? game._coverBase64
             : (game.cover?.url ? `https:${game.cover.url.replace('/t_thumb/', '/t_cover_big/')}` : null);
 
-          await db.query(insertSQL, [
+          await tx.query(insertSQL, [
             game.id,
             game.name,
             consoleName,
@@ -199,13 +198,8 @@ async function seedCatalog() {
             game.first_release_date || null
           ]);
           inserted++;
-        } catch (err) {
-          if (DB_TYPE === 'sqlite' && err.message?.includes('UNIQUE')) continue;
-          if (DB_TYPE !== 'sqlite' && err.code === '23505') continue;
-          logger.error({ err: err.message, igdb_id: game.id }, 'Error inserting game');
         }
-      }
-      await db.query('COMMIT');
+      });
       console.log(`   Inserted: ${inserted}`);
       totalNew += inserted;
     }

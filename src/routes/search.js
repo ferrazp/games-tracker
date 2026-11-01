@@ -41,21 +41,17 @@ async function persistToCatalog(games) {
     ? 'INSERT OR IGNORE INTO game_catalog (igdb_id, title, console_name, cover_url, release_date) VALUES (?, ?, ?, ?, ?)'
     : 'INSERT INTO game_catalog (igdb_id, title, console_name, cover_url, release_date) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (igdb_id) DO NOTHING';
 
-  await db.query('BEGIN');
-  for (const game of newGames) {
-    try {
+  // Los duplicados los resuelven INSERT OR IGNORE / ON CONFLICT DO NOTHING;
+  // cualquier otro error revierte el lote completo.
+  await db.transaction(async (tx) => {
+    for (const game of newGames) {
       let coverValue = game.cover_url;
       if (coverValue && coverValue.startsWith('//')) {
         coverValue = `https:${coverValue.replace('/t_thumb/', '/t_cover_big/')}`;
       }
-      await db.query(insertSQL, [game.igdb_id, game.name, game.console_name, coverValue, game.release_date || null]);
-    } catch (err) {
-      if (DB_TYPE === 'sqlite' && err.message?.includes('UNIQUE')) continue;
-      if (DB_TYPE !== 'sqlite' && err.code === '23505') continue;
-      logger.error({ err: err.message, igdb_id: game.igdb_id }, 'Error inserting game');
+      await tx.query(insertSQL, [game.igdb_id, game.name, game.console_name, coverValue, game.release_date || null]);
     }
-  }
-  await db.query('COMMIT');
+  });
 
   return newGames;
 }
