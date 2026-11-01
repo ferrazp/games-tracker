@@ -1761,3 +1761,17 @@ button:disabled {
     display: none;
   }
 }
+
+/* Paginación de la lista de juegos */
+.game-list-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.game-list-more-count {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}

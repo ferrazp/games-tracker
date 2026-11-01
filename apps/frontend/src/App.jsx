@@ -22,7 +22,9 @@ const DEFAULT_FILTERS = {
 
 function App() {
   const [games, setGames] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(() => {
@@ -60,13 +62,35 @@ function App() {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Error al cargar juegos');
       const data = await response.json();
-      setGames(data.games || []);
+      const list = data.games || [];
+      setGames(list);
+      setTotal(data.total ?? list.length);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [buildQueryString]);
+
+  const loadMoreGames = useCallback(async () => {
+    try {
+      setLoadingMore(true);
+      const qs = buildQueryString({ ...filters, offset: games.length });
+      const response = await fetch(`${API_URL}/games?${qs}`);
+      if (!response.ok) throw new Error('Error al cargar más juegos');
+      const data = await response.json();
+      const more = data.games || [];
+      setGames(prev => {
+        const seen = new Set(prev.map(g => g.id));
+        return [...prev, ...more.filter(g => !seen.has(g.id))];
+      });
+      if (data.total !== undefined) setTotal(data.total);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [buildQueryString, filters, games.length]);
 
   useEffect(() => {
     loadGames(filters);
@@ -90,6 +114,7 @@ function App() {
     localStorage.removeItem('user');
   };
 
+  const reloadGames = () => loadGames(filters);
   const handleGameDeleted = () => loadGames(filters);
   const handleGameUpdated = () => loadGames(filters);
   const handleGameAdded = () => loadGames(filters);
@@ -141,7 +166,10 @@ function App() {
             games={games}
             loading={loading}
             error={error}
-            onRefresh={loadGames}
+            onRefresh={reloadGames}
+            total={total}
+            onLoadMore={loadMoreGames}
+            loadingMore={loadingMore}
             onGameDeleted={handleGameDeleted}
             onGameUpdated={handleGameUpdated}
             getHeaders={getHeaders}
