@@ -174,3 +174,25 @@ it('shows loading state on submit button', async () => {
 
   expect(await screen.findByText('Guardando...')).toBeInTheDocument();
 });
+
+it('sends auth headers on IGDB online search', async () => {
+  const authHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer tok' };
+  const getHeaders = vi.fn(() => authHeaders);
+  global.fetch = vi.fn((url) => {
+    if (url.endsWith('/consoles')) return Promise.resolve({ ok: true, json: async () => ({ consoles: mockConsoles }) });
+    if (url.endsWith('/search')) return Promise.resolve({ ok: true, json: async () => ({ results: [], online_available: true }) });
+    return Promise.resolve({ ok: true, json: async () => ({ results: [] }) });
+  });
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  render(<GameForm onGameAdded={vi.fn()} getHeaders={getHeaders} />);
+
+  await user.type(screen.getByPlaceholderText('Buscá un juego del catálogo...'), 'Mario');
+  await vi.advanceTimersByTimeAsync(500);
+  await user.click(await screen.findByRole('button', { name: /Buscar en IGDB/ }));
+
+  await waitFor(() => {
+    const call = global.fetch.mock.calls.find(([url]) => url.endsWith('/search/online'));
+    expect(call).toBeTruthy();
+    expect(call[1].headers.Authorization).toBe('Bearer tok');
+  });
+});
