@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { initializeDatabase, closeDatabase, DB_TYPE } from './db/database.js';
 import logger from './db/logger.js';
-import { config } from './src/config.js';
+import { config, validateAuthConfig } from './src/config.js';
 import { errorHandler, notFound } from './src/middleware/error-handler.js';
 import healthRouter from './src/routes/health.js';
 import authRouter from './src/routes/auth.js';
@@ -37,6 +37,11 @@ app.use(errorHandler);
 app.use(notFound);
 
 async function startServer() {
+  const authErrors = validateAuthConfig();
+  if (authErrors.length > 0) {
+    logger.error({ errors: authErrors }, 'Insecure auth configuration, refusing to start');
+    process.exit(1);
+  }
   try {
     await initializeDatabase();
     app.listen(port, () => {

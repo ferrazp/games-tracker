@@ -118,7 +118,7 @@ describe('Error Handling', () => {
     config.twitch.hasCredentials = false;
     try {
       const res = await request(getApp())
-        .post('/search/online')
+        .post('/search/online').set('Authorization', getAuth())
         .send({ query: 'test' });
       assert.equal(res.status, 400);
       assert.ok(res.body.error.includes('Twitch credentials'));
@@ -130,7 +130,7 @@ describe('Error Handling', () => {
   it('POST /search/online returns 500 when database throws', async () => {
     await withBrokenDb(async () => {
       const res = await request(getApp())
-        .post('/search/online')
+        .post('/search/online').set('Authorization', getAuth())
         .send({ query: 'test', console_id: 1 });
       assert.equal(res.status, 500);
     });

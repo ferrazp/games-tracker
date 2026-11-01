@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { getDatabase, DB_TYPE } from '../../db/database.js';
 import logger from '../../db/logger.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireJWT } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireJWT, async (req, res) => {
   try {
     const db = getDatabase();
 
@@ -63,7 +63,7 @@ router.get('/stats', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/export', requireAuth, async (req, res) => {
+router.get('/export', requireJWT, async (req, res) => {
   try {
     const db = getDatabase();
 
@@ -102,7 +102,7 @@ router.get('/export', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/import', requireAuth, async (req, res) => {
+router.post('/import', requireJWT, async (req, res) => {
   try {
     const { games, consoles } = req.body;
 

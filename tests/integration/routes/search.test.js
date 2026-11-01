@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { getApp, getTestConsoleId } from '../helpers/setup.js';
+import { getApp, getTestConsoleId, getAuth } from '../helpers/setup.js';
 
 describe('Search', () => {
   it('POST /search returns expected shape', async () => {
@@ -89,7 +89,7 @@ describe('Search', () => {
 
   it('POST /search/online returns results or 400', async () => {
     const res = await request(getApp())
-      .post('/search/online')
+      .post('/search/online').set('Authorization', getAuth())
       .send({ query: 'mario' });
     if (res.status === 200) {
       assert.ok(Array.isArray(res.body.results));
@@ -101,14 +101,14 @@ describe('Search', () => {
 
   it('POST /search/online returns 400 for empty query', async () => {
     const res = await request(getApp())
-      .post('/search/online')
+      .post('/search/online').set('Authorization', getAuth())
       .send({ query: '' });
     assert.equal(res.status, 400);
   });
 
   it('POST /search/online filters by console_id', async () => {
     const res = await request(getApp())
-      .post('/search/online')
+      .post('/search/online').set('Authorization', getAuth())
       .send({ query: 'mario', console_id: getTestConsoleId() });
     assert.ok(res.status === 200 || res.status === 400);
   });

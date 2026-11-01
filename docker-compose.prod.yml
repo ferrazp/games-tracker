@@ -15,6 +15,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS}
       FRONTEND_URL: http://localhost:9090
     ports:
       - "4001:4000"

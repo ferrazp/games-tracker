@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { getTwitchToken } from '../services/twitch.js';
 import { IGDB_PLATFORM_TO_CONSOLE } from '../services/igdb.js';
 import { validateSearchQuery } from '../validators/search.js';
+import { requireJWT } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -126,7 +127,7 @@ router.post('/search', async (req, res) => {
   }
 });
 
-router.post('/search/online', searchOnlineLimiter, async (req, res) => {
+router.post('/search/online', requireJWT, searchOnlineLimiter, async (req, res) => {
   try {
     if (!config.twitch.hasCredentials) {
       return res.status(400).json({ error: 'Twitch credentials not configured. Set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET in .env' });

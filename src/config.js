@@ -21,3 +21,22 @@ export const config = Object.freeze({
 
 export const CURRENT_YEAR = new Date().getFullYear();
 export const CURRENT_MONTH = new Date().getMonth() + 1;
+
+const DEFAULT_ADMIN_PASS = '1234';
+const MIN_JWT_SECRET_LENGTH = 32;
+
+/**
+ * Valida que en producción las credenciales de auth no usen los valores por defecto.
+ * Devuelve la lista de errores (vacía si la configuración es aceptable).
+ */
+export function validateAuthConfig(env = process.env) {
+  if (env.NODE_ENV !== 'production') return [];
+  const errors = [];
+  if (!env.JWT_SECRET || env.JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
+    errors.push(`JWT_SECRET debe estar definido y tener al menos ${MIN_JWT_SECRET_LENGTH} caracteres`);
+  }
+  if (!env.ADMIN_PASS || env.ADMIN_PASS === DEFAULT_ADMIN_PASS) {
+    errors.push('ADMIN_PASS debe estar definido y no puede ser el valor por defecto');
+  }
+  return errors;
+}
