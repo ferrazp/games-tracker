@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1] - 2026-11-01
+
+### Security
+- `/stats`, `/export` e `/import` estaban abiertos cuando `API_KEY` no estaba definida: ahora requieren JWT
+- `POST /search/online` ahora requiere JWT (antes cualquiera consumía la cuota de IGDB y escribía en el catálogo)
+- Con `NODE_ENV=production` el servidor no arranca si `JWT_SECRET` falta o tiene menos de 32 caracteres, o si `ADMIN_PASS` falta o es el valor por defecto
+- `docker-compose.prod.yml` pasa `JWT_SECRET`, `ADMIN_USER` y `ADMIN_PASS`; documentados en `.env.example`
+
+### Fixed
+- `PUT /games/:id` borraba `release_year` cuando el body no lo incluía (el formulario de edición nunca lo envía); ahora se conserva y se valida contra el valor guardado
+- Transacciones en PostgreSQL: `BEGIN`/`COMMIT` iban por `pool.query` (conexiones distintas). Nuevo `db.transaction()` con conexión dedicada, usado en el catálogo de búsqueda online, el reorden de wishlist (que en PG no tenía transacción) y `seed-catalog`
+
 ## [v1.4.0] - 2026-06-21
 
 ### Added
