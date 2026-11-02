@@ -79,12 +79,18 @@ test('clic en una tarjeta muestra el detalle y "← <nombre>" vuelve a la grilla
 });
 
 test('el aviso abre la revisión de juegos sin identificar y "Volver" regresa', async () => {
-  mockSagas({ configured: true, unresolved_count: 1, sagas: [] });
+  global.fetch = vi.fn((url) => Promise.resolve({
+    ok: true,
+    status: 200,
+    json: async () => (url.endsWith('/sagas/unresolved')
+      ? [{ id: 7, title: 'Tales', console_name: 'PS2', candidates: [] }]
+      : { configured: true, unresolved_count: 1, sagas: [] }),
+  }));
   const user = userEvent.setup();
   render(<Sagas getHeaders={getHeaders} isAuthenticated />);
 
   await user.click(await screen.findByRole('button', { name: '1 juego sin identificar — revisar' }));
-  await user.click(screen.getByRole('button', { name: 'Volver' }));
+  await user.click(await screen.findByRole('button', { name: 'Volver' }));
   expect(await screen.findByRole('button', { name: '1 juego sin identificar — revisar' })).toBeInTheDocument();
 });
 

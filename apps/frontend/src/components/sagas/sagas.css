@@ -323,3 +323,66 @@
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* ===== JUEGOS SIN IDENTIFICAR ===== */
+.saga-unresolved-game {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.saga-unresolved-game h3 {
+  display: inline;
+  margin: 0 8px 0 0;
+  font-size: 15px;
+}
+
+.saga-unresolved-console {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.saga-unresolved-candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.saga-candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saga-candidate:hover:not(:disabled) {
+  border-color: #667eea;
+}
+
+.saga-candidate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saga-candidate img {
+  width: 28px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.saga-unresolved-error {
+  margin: 8px 0 0;
+  color: #e74c3c;
+  font-size: 12px;
+}
