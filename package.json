@@ -13,7 +13,15 @@
     "test": "npm test --workspaces && node --test \"deploy/scripts/test/*.test.mjs\"",
     "build": "npm run build -w games-tracker",
     "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w games-backend\" \"npm start -w games-tracker\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "qa:up": "node deploy/scripts/qa.mjs up",
+    "qa:down": "node deploy/scripts/qa.mjs down",
+    "qa:reset": "node deploy/scripts/qa.mjs reset",
+    "prod:deploy": "node deploy/scripts/prod.mjs deploy",
+    "prod:backup": "node deploy/scripts/prod.mjs backup",
+    "prod:restore": "node deploy/scripts/prod.mjs restore",
+    "prod:rollback": "node deploy/scripts/prod.mjs rollback",
+    "prod:status": "node deploy/scripts/prod.mjs status"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

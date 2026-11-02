@@ -1,3 +1,5 @@
+> ⚠️ **Obsoleto desde v1.5.0.** Los `docker-compose*.yml` y `nginx.prod.conf` de este backend se eliminaron. QA y Prod se levantan con `deploy/compose.yaml` y los scripts del monorepo: ver [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
+
 ## 🌍 Perfiles de Ambiente
 
 El proyecto soporta **3 entornos** independientes: desarrollo local sin Docker (SQLite), desarrollo Dockerizado (PostgreSQL) y producción Dockerizada (PostgreSQL con base separada).

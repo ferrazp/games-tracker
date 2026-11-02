@@ -41,16 +41,13 @@ Genera los archivos estáticos en `build/`.
 
 ### Docker
 
-```bash
-docker build -t games-tracker-front .
-docker run -p 3000:80 games-tracker-front
-```
-
-O usando docker-compose desde el backend:
+La imagen se construye desde la raíz del monorepo y llama a la API por `/api` (su nginx hace de proxy al backend):
 
 ```bash
-docker-compose up
+docker build -f apps/frontend/Dockerfile -t ghcr.io/ferrazp/games-tracker-frontend:local .
 ```
+
+Para levantarla junto al backend y Postgres, ver [`docs/OPERACION.md`](../../docs/OPERACION.md).
 
 ## Estructura
 

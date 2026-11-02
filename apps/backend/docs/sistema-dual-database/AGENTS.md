@@ -1,3 +1,5 @@
+> ⚠️ **Obsoleto desde v1.5.0.** Los `docker-compose*.yml` y `nginx.prod.conf` de este backend se eliminaron. QA y Prod se levantan con `deploy/compose.yaml` y los scripts del monorepo: ver [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
+
 ## 🗄️ Sistema Dual Database
 
 El proyecto usa `server-unified.js` que elige la BD automáticamente según `DB_TYPE` en `.env`:
