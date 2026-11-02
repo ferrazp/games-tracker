@@ -250,11 +250,15 @@ router.put('/games/:id', requireJWT, async (req, res) => {
     if (req.body.release_year === undefined) {
       data.release_year = existing.release_year ?? null;
     }
-    // Igual con el vínculo a IGDB: sin igdb_id en el body se conserva el guardado.
+    // Igual con el vínculo a IGDB: sin igdb_id en el body se conserva el guardado,
+    // salvo que cambie el título: ahí se limpia y lo vuelve a buscar el backfill.
+    const sameTitle = String(existing.title ?? '').trim().toLowerCase() === data.title.toLowerCase();
     let igdbMatch = 'selected';
-    if (data.igdb_id === null && req.body.igdb_id === undefined) {
+    let keepCandidates = false;
+    if (data.igdb_id === null && req.body.igdb_id === undefined && sameTitle) {
       data.igdb_id = existing.igdb_id ?? null;
       igdbMatch = existing.igdb_match ?? null;
+      keepCandidates = true;
     } else if (data.igdb_id === null) {
       igdbMatch = null;
     }
@@ -287,10 +291,10 @@ router.put('/games/:id', requireJWT, async (req, res) => {
     }
 
     const updateSQL = DB_TYPE === 'sqlite'
-      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, release_year = ?, igdb_id = ?, igdb_match = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, release_year = $10, igdb_id = $11, igdb_match = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13';
+      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, release_year = ?, igdb_id = ?, igdb_match = ?, igdb_candidates = CASE WHEN ? = 1 THEN igdb_candidates ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, release_year = $10, igdb_id = $11, igdb_match = $12, igdb_candidates = CASE WHEN $13::int = 1 THEN igdb_candidates ELSE NULL END, updated_at = CURRENT_TIMESTAMP WHERE id = $14';
 
-    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, data.igdb_id, igdbMatch, id];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, data.igdb_id, igdbMatch, keepCandidates ? 1 : 0, id];
     const result = await db.query(updateSQL, params);
 
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
