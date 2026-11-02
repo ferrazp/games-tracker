@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { getApp } from '../helpers/setup.js';
+import { getApp, getAuth } from '../helpers/setup.js';
 
 describe('Stats', () => {
   it('GET /stats returns stats object', async () => {
-    const res = await request(getApp()).get('/stats');
+    const res = await request(getApp()).get('/stats').set('Authorization', getAuth());
     assert.equal(res.status, 200);
     assert.equal(typeof res.body.total_games, 'number');
     assert.equal(typeof res.body.total_consoles, 'number');
@@ -20,7 +20,7 @@ describe('Export/Import', () => {
   let exportData;
 
   it('GET /export returns export data', async () => {
-    const res = await request(getApp()).get('/export');
+    const res = await request(getApp()).get('/export').set('Authorization', getAuth());
     assert.equal(res.status, 200);
     assert.equal(typeof res.body.exported_at, 'string');
     assert.equal(typeof res.body.db_type, 'string');
@@ -32,7 +32,7 @@ describe('Export/Import', () => {
 
   it('POST /import imports consoles and games', async () => {
     const res = await request(getApp())
-      .post('/import')
+      .post('/import').set('Authorization', getAuth())
       .send({
         consoles: [{ name: 'Imported Console' }],
         games: [{ title: 'Imported Game', console_name: 'Imported Console', year_played: 2023 }]
@@ -44,14 +44,14 @@ describe('Export/Import', () => {
 
   it('POST /import returns 400 with empty body', async () => {
     const res = await request(getApp())
-      .post('/import')
+      .post('/import').set('Authorization', getAuth())
       .send({});
     assert.equal(res.status, 400);
   });
 
   it('POST /import skips games with no title', async () => {
     const res = await request(getApp())
-      .post('/import')
+      .post('/import').set('Authorization', getAuth())
       .send({
         consoles: [],
         games: [{ console_name: 'Test Console', year_played: 2023 }]
@@ -62,7 +62,7 @@ describe('Export/Import', () => {
 
   it('POST /import handles console with whitespace-only name', async () => {
     const res = await request(getApp())
-      .post('/import')
+      .post('/import').set('Authorization', getAuth())
       .send({
         consoles: [{ name: '   ' }],
         games: []
@@ -78,7 +78,7 @@ describe('Export/Import', () => {
       year_played: 2020 + (i % 5)
     }));
     const res = await request(getApp())
-      .post('/import')
+      .post('/import').set('Authorization', getAuth())
       .send({ consoles: [], games });
     assert.equal(res.status, 200);
     assert.equal(res.body.imported_games, 50);
