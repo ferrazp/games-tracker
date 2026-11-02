@@ -54,7 +54,7 @@ router.get('/wishlist', requireJWT, async (req, res) => {
   }
 });
 
-async function resolveCatalogId(db, body) {
+export async function resolveCatalogId(db, body) {
   const { game_catalog_id, igdb_id, title, console_name, cover_url } = body;
 
   if (game_catalog_id && Number.isInteger(game_catalog_id) && game_catalog_id > 0) {
