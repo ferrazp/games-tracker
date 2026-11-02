@@ -24,3 +24,24 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          push: false
+          cache-from: type=gha,scope=backend
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          push: false
+          load: true
+          tags: gt-frontend:ci
+          cache-from: type=gha,scope=frontend
+      - name: Frontend bundle uses relative API
+        run: |
+          docker run --rm --entrypoint sh gt-frontend:ci -c \
+            "! grep -l 'localhost:4000' /usr/share/nginx/html/assets/*.js"

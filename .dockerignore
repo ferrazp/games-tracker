@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+**/*.db
+**/*.db-journal
+.git
+.github
+.husky
+.superpowers
+deploy
+docs
+**/docs
+**/tests
+**/*.md
