@@ -5,7 +5,7 @@ import { IGDB_PLATFORM_TO_CONSOLE } from './igdb.js';
 import {
   SAGA_GAME_TYPES,
   largestCollection,
-  canonicalId,
+  climbToCanonical,
   mergeStatus,
   statusOf,
   releaseYear,
@@ -13,6 +13,7 @@ import {
 } from './sagas-logic.js';
 
 const MAX_CANDIDATES = 5;
+const MAX_PARENT_HOPS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isSqlite = (db) => db instanceof SQLiteClient;
@@ -53,13 +54,18 @@ function platformIdsFor(consoleName) {
 
 export async function backfillIgdbIds(db, igdb) {
   const { rows: games } = await db.query(
-    `SELECT g.id, g.title, c.name AS console_name
+    `SELECT g.id, g.title, g.igdb_id, c.name AS console_name
      FROM games g LEFT JOIN consoles c ON g.console_id = c.id
      WHERE g.igdb_match IS NULL`
   );
   const counts = { auto: 0, unresolved: 0 };
 
   for (const game of games) {
+    // Ya trae id (p. ej. importado de un backup viejo): se respeta sin buscar.
+    if (game.igdb_id != null) {
+      await db.query(sql(db, "UPDATE games SET igdb_match = 'selected' WHERE id = ?"), [game.id]);
+      continue;
+    }
     const { rows: catalog } = await db.query(
       sql(db, 'SELECT igdb_id, title, console_name FROM game_catalog WHERE LOWER(title) = LOWER(?)'),
       [game.title]
@@ -91,6 +97,29 @@ export async function backfillIgdbIds(db, igdb) {
   return counts;
 }
 
+async function searchCandidates(igdb, title, consoleName) {
+  const results = await igdb.search(title, platformIdsFor(consoleName));
+  return results.slice(0, MAX_CANDIDATES).map(toCandidate);
+}
+
+// El juego de IGDB no lleva a un principal o remake: los registros que lo usan
+// pasan a revisión del usuario, con candidatos de la búsqueda por título.
+async function markUnresolved(db, igdb, igdbId) {
+  const { rows } = await db.query(
+    sql(db, `SELECT g.id, g.title, c.name AS console_name
+     FROM games g LEFT JOIN consoles c ON g.console_id = c.id
+     WHERE g.igdb_id = ? AND (g.igdb_match IS NULL OR g.igdb_match NOT IN ('none', 'unresolved'))`),
+    [igdbId]
+  );
+  for (const game of rows) {
+    const candidates = await searchCandidates(igdb, game.title, game.console_name);
+    await db.query(
+      sql(db, "UPDATE games SET igdb_match = 'unresolved', igdb_candidates = ? WHERE id = ?"),
+      [JSON.stringify(candidates), game.id]
+    );
+  }
+}
+
 async function resolvePending(db, igdb, now) {
   const { rows } = await db.query(
     `SELECT DISTINCT g.igdb_id
@@ -103,20 +132,29 @@ async function resolvePending(db, igdb, now) {
   if (pending.length === 0) return 0;
 
   const byId = new Map((await igdb.gamesByIds(pending)).map((g) => [g.id, g]));
-  const missingParents = [...new Set(
-    [...byId.values()].map(canonicalId).filter((id) => !byId.has(id))
-  )];
-  if (missingParents.length > 0) {
-    for (const g of await igdb.gamesByIds(missingParents)) byId.set(g.id, g);
+  const climb = (id) => climbToCanonical(byId.get(id), byId, MAX_PARENT_HOPS);
+  // Cada vuelta pide los padres que faltan; alcanza con un pedido por salto.
+  for (let round = 0; round < MAX_PARENT_HOPS; round += 1) {
+    const missing = [...new Set(
+      pending.filter((id) => byId.has(id)).map(climb).filter((r) => r.missing != null).map((r) => r.missing)
+    )];
+    if (missing.length === 0) break;
+    const parents = await igdb.gamesByIds(missing);
+    if (parents.length === 0) break;
+    for (const g of parents) byId.set(g.id, g);
   }
 
   const resolvedAt = now.toISOString();
   let resolved = 0;
   for (const id of pending) {
-    const game = byId.get(id);
-    if (!game) continue;
-    const canonical = byId.get(canonicalId(game));
-    if (!canonical) continue;
+    if (!byId.has(id)) continue;
+    const result = climb(id);
+    if (result.missing != null) continue;
+    if (result.canonical === null) {
+      await markUnresolved(db, igdb, id);
+      continue;
+    }
+    const canonical = result.canonical;
     const saga = largestCollection(canonical.collections);
 
     await db.query(
@@ -159,6 +197,8 @@ function versionsOf(game) {
 
 async function refreshSaga(db, igdb, sagaId, now) {
   const members = await igdb.collectionMembers(sagaId);
+  // Una respuesta vacía no se toma como "la saga quedó sin juegos": se reintenta luego.
+  if (members.length === 0) return false;
   const games = members.filter(
     (g) => SAGA_GAME_TYPES.includes(g.game_type) && largestCollection(g.collections)?.id === sagaId
   );
@@ -186,6 +226,7 @@ async function refreshSaga(db, igdb, sagaId, now) {
     }
     await tx.query(sql(db, 'UPDATE sagas SET refreshed_at = ? WHERE id = ?'), [now.toISOString(), sagaId]);
   });
+  return true;
 }
 
 export async function syncSagas(db, igdb, { now = new Date(), maxAgeDays = 7, onlySagaId = null } = {}) {
@@ -198,15 +239,18 @@ export async function syncSagas(db, igdb, { now = new Date(), maxAgeDays = 7, on
       [new Date(now.getTime() - maxAgeDays * DAY_MS).toISOString()]
     );
 
-  for (const { id } of due) await refreshSaga(db, igdb, Number(id), now);
-  return { resolved, refreshed: due.length };
+  let refreshed = 0;
+  for (const { id } of due) {
+    if (await refreshSaga(db, igdb, Number(id), now)) refreshed += 1;
+  }
+  return { resolved, refreshed };
 }
 
 export async function getStatusByCanonical(db) {
   const { rows } = await db.query(
     `SELECT r.canonical_igdb_id, g.completed
      FROM games g JOIN igdb_resolution r ON r.igdb_id = g.igdb_id
-     WHERE g.igdb_match IS NULL OR g.igdb_match <> 'none'`
+     WHERE g.igdb_match IS NULL OR g.igdb_match NOT IN ('none', 'unresolved')`
   );
   const status = new Map();
   for (const row of rows) {

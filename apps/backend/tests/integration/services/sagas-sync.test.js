@@ -137,6 +137,19 @@ describe('backfillIgdbIds', () => {
     assert.equal(igdb.search.mock.callCount(), 1);
   });
 
+  it('un juego con igdb_id y sin igdb_match conserva el id como selected sin buscar', async () => {
+    await addCatalog(5555, 'Viejo Importado', 'PC');
+    const id = await addGame({ title: 'Viejo Importado', console: 'PC', igdb_id: 1234 });
+    const igdb = fakeIgdb();
+
+    await backfillIgdbIds(db, igdb);
+
+    const row = await gameRow(id);
+    assert.equal(row.igdb_id, 1234);
+    assert.equal(row.igdb_match, 'selected');
+    assert.equal(igdb.search.mock.callCount(), 0);
+  });
+
   it('un único resultado de título igual en IGDB se asigna como auto', async () => {
     const id = await addGame({ title: 'Solo Title', console: 'PC' });
     const igdb = fakeIgdb({
@@ -213,11 +226,63 @@ describe('syncSagas', () => {
   it('ignora los juegos none y unresolved', async () => {
     await addGame({ title: 'No saga', igdb_id: 418, igdb_match: 'none' });
     await addGame({ title: 'Dudoso', igdb_match: 'unresolved' });
+    await addGame({ title: 'Dudoso con id', igdb_id: 415, igdb_match: 'unresolved' });
     const igdb = sagaIgdb();
 
     const result = await syncSagas(db, igdb);
 
     assert.equal(igdb.gamesByIds.mock.callCount(), 0);
+    assert.deepEqual(result, { resolved: 0, refreshed: 0 });
+  });
+
+  it('un DLC de un remaster sube hasta el juego principal', async () => {
+    await addGame({ title: 'FF X DLC', igdb_id: 7000, igdb_match: 'selected' });
+    const remaster = { id: 21899, name: 'FF X HD', game_type: 9, version_parent: 418 };
+    const dlc = { id: 7000, name: 'FF X DLC', game_type: 1, parent_game: { id: 21899 } };
+    const igdb = fakeIgdb({
+      games: { 418: ffX, 21899: remaster, 7000: dlc },
+      members: { 39: [ffX] },
+    });
+
+    const result = await syncSagas(db, igdb);
+
+    const { rows } = await db.query('SELECT * FROM igdb_resolution WHERE igdb_id = 7000');
+    assert.equal(rows[0].canonical_igdb_id, 418);
+    assert.equal(rows[0].saga_id, 39);
+    assert.equal(igdb.gamesByIds.mock.callCount(), 3);
+    assert.equal(result.resolved, 1);
+  });
+
+  it('un bundle sin padres queda unresolved con candidatos y sin resolución', async () => {
+    const id = await addGame({ title: 'FF Bundle', console: 'PlayStation 2', igdb_id: 8000, igdb_match: 'selected' });
+    const igdb = fakeIgdb({
+      games: { 8000: { id: 8000, name: 'FF Bundle', game_type: 3 } },
+      searchResults: { 'FF Bundle': [{ id: 8000, name: 'FF Bundle' }, { id: 418, name: 'Final Fantasy X' }] },
+    });
+
+    const result = await syncSagas(db, igdb);
+
+    const { rows } = await db.query('SELECT * FROM igdb_resolution WHERE igdb_id = 8000');
+    assert.equal(rows.length, 0);
+    const row = await gameRow(id);
+    assert.equal(row.igdb_match, 'unresolved');
+    assert.deepEqual(JSON.parse(row.igdb_candidates).map((c) => c.igdb_id), [8000, 418]);
+    assert.deepEqual(igdb.search.mock.calls[0].arguments, ['FF Bundle', [8]]);
+    assert.equal(result.resolved, 0);
+  });
+
+  it('si IGDB devuelve la saga vacía no la vacía ni la marca refrescada', async () => {
+    await db.query("INSERT INTO sagas (id, name, refreshed_at) VALUES (39, 'Final Fantasy', NULL)");
+    await db.query("INSERT INTO saga_games (igdb_id, saga_id, name) VALUES (418, 39, 'Final Fantasy X')");
+    const igdb = fakeIgdb();
+
+    const result = await syncSagas(db, igdb);
+
+    const { rows: sg } = await db.query('SELECT igdb_id FROM saga_games WHERE saga_id = 39');
+    assert.equal(sg.length, 1);
+    const { rows: sagas } = await db.query('SELECT refreshed_at FROM sagas WHERE id = 39');
+    assert.equal(sagas[0].refreshed_at, null);
+    assert.equal(igdb.collectionMembers.mock.callCount(), 1);
     assert.deepEqual(result, { resolved: 0, refreshed: 0 });
   });
 
@@ -243,11 +308,14 @@ describe('getStatusByCanonical', () => {
     await db.query('INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id) VALUES (?, ?, ?)', [11000, 418, 39]);
     await db.query('INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id) VALUES (?, ?, ?)', [418, 418, 39]);
     await db.query('INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id) VALUES (?, ?, ?)', [6000, 6000, 39]);
+    await addGame({ title: 'Dudoso', igdb_id: 6001, igdb_match: 'unresolved', completed: 1 });
+    await db.query('INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id) VALUES (?, ?, ?)', [6001, 6001, 39]);
 
     const status = await getStatusByCanonical(db);
 
     assert.equal(status.get(418), 'completed');
     assert.equal(status.has(6000), false);
+    assert.equal(status.has(6001), false);
   });
 });
 

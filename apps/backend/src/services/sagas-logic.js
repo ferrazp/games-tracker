@@ -21,6 +21,21 @@ export function canonicalId(game) {
   return idOf(game.version_parent) ?? idOf(game.parent_game) ?? game.id;
 }
 
+// Sube por version_parent / parent_game hasta un juego principal o remake.
+// Devuelve { canonical } (null si no se llega en maxHops o no hay padre) o
+// { missing: id } si hace falta pedir a IGDB un padre que no está en byId.
+export function climbToCanonical(game, byId, maxHops = 3) {
+  let current = game;
+  for (let hops = 0; ; hops += 1) {
+    if (SAGA_GAME_TYPES.includes(current.game_type)) return { canonical: current };
+    const parent = idOf(current.version_parent) ?? idOf(current.parent_game);
+    if (parent == null || hops === maxHops) return { canonical: null };
+    const next = byId.get(parent);
+    if (!next) return { missing: parent };
+    current = next;
+  }
+}
+
 export function statusOf(row) {
   return row.completed ? 'completed' : 'pending';
 }

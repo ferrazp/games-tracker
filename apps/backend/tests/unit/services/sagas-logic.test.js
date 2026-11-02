@@ -4,6 +4,7 @@ import {
   SAGA_GAME_TYPES,
   largestCollection,
   canonicalId,
+  climbToCanonical,
   statusOf,
   mergeStatus,
   releaseYear,
@@ -52,6 +53,37 @@ describe('sagas-logic', () => {
     });
     it('sin padres es él mismo', () => {
       assert.equal(canonicalId({ id: 5, game_type: 11 }), 5);
+    });
+  });
+
+  describe('climbToCanonical', () => {
+    const main = { id: 418, game_type: 0 };
+    const remaster = { id: 21899, game_type: 9, version_parent: 418 };
+    const dlc = { id: 7000, game_type: 1, parent_game: { id: 21899 } };
+    const byId = new Map([[418, main], [21899, remaster], [7000, dlc]]);
+
+    it('un juego principal es su propio canónico', () => {
+      assert.deepEqual(climbToCanonical(main, byId), { canonical: main });
+    });
+    it('DLC → remaster → principal termina en el principal', () => {
+      assert.deepEqual(climbToCanonical(dlc, byId), { canonical: main });
+    });
+    it('si falta un padre lo pide', () => {
+      assert.deepEqual(climbToCanonical(dlc, new Map([[7000, dlc]])), { missing: 21899 });
+    });
+    it('sin padre y sin ser principal ni remake → null', () => {
+      assert.deepEqual(climbToCanonical({ id: 3, game_type: 3 }, byId), { canonical: null });
+    });
+    it('corta después de 3 saltos', () => {
+      const chain = new Map([
+        [1, { id: 1, game_type: 1, parent_game: 2 }],
+        [2, { id: 2, game_type: 1, parent_game: 3 }],
+        [3, { id: 3, game_type: 1, parent_game: 4 }],
+        [4, { id: 4, game_type: 1, parent_game: 5 }],
+        [5, { id: 5, game_type: 0 }],
+      ]);
+      assert.deepEqual(climbToCanonical(chain.get(2), chain), { canonical: chain.get(5) });
+      assert.deepEqual(climbToCanonical(chain.get(1), chain), { canonical: null });
     });
   });
 
