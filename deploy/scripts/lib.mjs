@@ -143,3 +143,17 @@ export function checkVolumeName(env, volume) {
     throw new Error(`DB_VOLUME="${volume}" no corresponde al ambiente ${env}: tiene que empezar con gt-${env}`);
   }
 }
+
+/** Lee un archivo .env (KEY=valor); saca comillas que envuelven el valor, igual que docker compose. */
+export function parseEnvFile(text) {
+  const out = {};
+  for (const line of String(text ?? '').split(/\r?\n/)) {
+    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
+    if (!m) continue;
+    let value = m[2].trim();
+    const q = value[0];
+    if ((q === '"' || q === "'") && value.length >= 2 && value.endsWith(q)) value = value.slice(1, -1);
+    out[m[1]] = value;
+  }
+  return out;
+}

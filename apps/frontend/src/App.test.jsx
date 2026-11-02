@@ -148,3 +148,100 @@ test('"Reintentar" reloads keeping the active filters', async () => {
   const retryUrl = global.fetch.mock.calls.filter(([u]) => u.includes('/games'))[1][0];
   expect(retryUrl).toContain('sort_by=created_at');
 });
+
+describe('sesión vencida (401)', () => {
+  const login = () => {
+    localStorage.setItem('token', 'expired-token');
+    localStorage.setItem('user', JSON.stringify({ username: 'testuser', id: 1 }));
+  };
+  const game = { id: 7, title: 'Juego 7', console_name: 'PC', year_played: 2024, completed: false };
+
+  test('un 401 en una acción cierra la sesión, avisa en el login y no muestra alert()', async () => {
+    login();
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    global.fetch = vi.fn().mockImplementation((url, opts = {}) => {
+      if (opts.method === 'DELETE') {
+        return Promise.resolve({ ok: false, status: 401, json: async () => ({ error: 'Invalid or expired token' }) });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => (url.includes('/games') ? { games: [game], total: 1 } : { consoles: [] }),
+      });
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByText('Eliminar'));
+
+    expect(await screen.findByText(/Tu sesión expiró/i)).toBeInTheDocument();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  test('un 401 al abrir la wishlist también vuelve al login con el aviso', async () => {
+    login();
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/wishlist')) {
+        return Promise.resolve({ ok: false, status: 401, json: async () => ({ error: 'Invalid or expired token' }) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => (url.includes('/games') ? { games: [] } : { consoles: [] }) });
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByText('Próximos Juegos'));
+
+    expect(await screen.findByText(/Tu sesión expiró/i)).toBeInTheDocument();
+    expect(localStorage.getItem('token')).toBeNull();
+  });
+
+  test('un login con contraseña incorrecta (401) no muestra el aviso de sesión expirada', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: 'Credenciales inválidas' }) });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(screen.getByPlaceholderText(/usuario/i), 'admin');
+    await user.type(screen.getByPlaceholderText(/contraseña/i), 'mala');
+    await user.click(screen.getByRole('button', { name: /entrar|ingresar|acceder/i }));
+
+    expect(await screen.findByText('Credenciales inválidas')).toBeInTheDocument();
+    expect(screen.queryByText(/Tu sesión expiró/i)).not.toBeInTheDocument();
+  });
+});
+
+test('el buscador de la lista espera a que termines de escribir (una sola búsqueda)', async () => {
+  localStorage.setItem('token', 'test-token');
+  localStorage.setItem('user', JSON.stringify({ username: 'testuser', id: 1 }));
+  global.fetch = vi.fn().mockImplementation((url) =>
+    Promise.resolve({ ok: true, status: 200, json: async () => (url.includes('/games') ? { games: [] } : { consoles: [] }) })
+  );
+
+  const user = userEvent.setup();
+  render(<App />);
+  await user.type(screen.getByPlaceholderText('Buscar por título...'), 'mario');
+
+  const searches = () => global.fetch.mock.calls.map(([url]) => url).filter((u) => u.includes('/games') && u.includes('q='));
+  await waitFor(() => expect(searches()).toHaveLength(1), { timeout: 2000 });
+  expect(searches()[0]).toContain('q=mario');
+  expect(screen.getByPlaceholderText('Buscar por título...')).toHaveValue('mario');
+});
+
+test('"Limpiar" vacía también el texto del buscador', async () => {
+  localStorage.setItem('token', 'test-token');
+  localStorage.setItem('user', JSON.stringify({ username: 'testuser', id: 1 }));
+  global.fetch = vi.fn().mockImplementation((url) =>
+    Promise.resolve({ ok: true, status: 200, json: async () => (url.includes('/games') ? { games: [] } : { consoles: [] }) })
+  );
+
+  const user = userEvent.setup();
+  render(<App />);
+  const input = screen.getByPlaceholderText('Buscar por título...');
+  await user.type(input, 'zelda');
+  await user.click(await screen.findByText('Limpiar', {}, { timeout: 2000 }));
+
+  expect(input).toHaveValue('');
+  await new Promise((r) => setTimeout(r, 600));
+  const last = global.fetch.mock.calls.map(([u]) => u).filter((u) => u.includes('/games')).at(-1);
+  expect(last).not.toContain('q=');
+});

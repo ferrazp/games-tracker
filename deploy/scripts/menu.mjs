@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseEnvFile } from './lib.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 process.chdir(ROOT);
@@ -14,8 +15,7 @@ const DOCKER_DESKTOP = 'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe';
 function envValue(env, key, fallback) {
   const file = `deploy/${env}.env`;
   if (!existsSync(file)) return fallback;
-  const m = new RegExp(`^${key}=(.*)$`, 'm').exec(readFileSync(file, 'utf8'));
-  return m ? m[1].trim() : fallback;
+  return parseEnvFile(readFileSync(file, 'utf8'))[key] || fallback;
 }
 
 const URLS = {

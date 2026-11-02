@@ -10,7 +10,7 @@ import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import {
-  checkVolumeName, composeArgs, confirmWord, createLineFilter, isOwnerStatement,
+  checkVolumeName, composeArgs, confirmWord, createLineFilter, isOwnerStatement, parseEnvFile,
 } from './lib.mjs';
 
 /** Raíz del monorepo: todos los comandos corren desde ahí. */
@@ -25,11 +25,7 @@ export function die(msg) {
 export function readEnvFile(env) {
   const file = `deploy/${env}.env`;
   if (!existsSync(file)) die(`Falta ${file}. Copiá deploy/${env}.env.example y completalo (ver docs/OPERACION.md).`);
-  const out = {};
-  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
-    if (m) out[m[1]] = m[2];
-  }
+  const out = parseEnvFile(readFileSync(file, 'utf8'));
   try {
     checkVolumeName(env, out.DB_VOLUME);
   } catch (e) {

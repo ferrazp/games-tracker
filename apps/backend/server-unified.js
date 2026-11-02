@@ -16,6 +16,10 @@ import wishlistRouter from './src/routes/wishlist.js';
 const app = express();
 const port = config.server.port;
 
+// En QA/Prod las requests llegan por el nginx del front, dentro de la red Docker:
+// confiar solo en proxies locales/privados para tomar la IP real de X-Forwarded-For.
+app.set('trust proxy', 'loopback, uniquelocal');
+
 app.use(cors({ origin: config.server.frontendUrl }));
 app.use(express.json({ limit: '5mb' }));
 

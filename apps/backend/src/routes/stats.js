@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getDatabase, DB_TYPE } from '../../db/database.js';
 import logger from '../../db/logger.js';
 import { requireJWT } from '../middleware/auth.js';
+import { resolveCatalogId } from './wishlist.js';
 
 const router = Router();
 
@@ -63,23 +64,42 @@ router.get('/stats', requireJWT, async (req, res) => {
   }
 });
 
+// Campos de juego que viajan en export/import (además de title y consola).
+const GAME_FIELDS = [
+  'year_played', 'month_played', 'year_completed', 'month_completed',
+  'hours_played', 'release_year', 'completed', 'image',
+];
+
+const placeholders = (n) => Array.from({ length: n }, (_, i) => (DB_TYPE === 'sqlite' ? '?' : `$${i + 1}`)).join(', ');
+
+const toInt = (v) => (v === undefined || v === null || v === '' ? null : Number.parseInt(v, 10));
+const toNum = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+
+function gameValues(g) {
+  return {
+    year_played: toInt(g.year_played),
+    month_played: toInt(g.month_played),
+    year_completed: toInt(g.year_completed),
+    month_completed: toInt(g.month_completed),
+    hours_played: toNum(g.hours_played),
+    release_year: toInt(g.release_year),
+    completed: g.completed === true || g.completed === 1 || g.completed === 'true',
+    image: g.image || null,
+  };
+}
+
 router.get('/export', requireJWT, async (req, res) => {
   try {
     const db = getDatabase();
 
     const gamesResult = await db.query(
-      DB_TYPE === 'sqlite'
-        ? `SELECT g.id, g.title, g.year_played, g.completed, g.image, c.name as console_name,
-                  g.created_at, g.updated_at
-           FROM games g LEFT JOIN consoles c ON g.console_id = c.id
-           ORDER BY g.created_at`
-        : `SELECT g.id, g.title, g.year_played, g.completed, g.image, c.name as console_name,
-                  g.created_at, g.updated_at
-           FROM games g LEFT JOIN consoles c ON g.console_id = c.id
-           ORDER BY g.created_at`
+      `SELECT g.id, g.title, ${GAME_FIELDS.map((f) => `g.${f}`).join(', ')},
+              c.name as console_name, g.created_at, g.updated_at
+       FROM games g LEFT JOIN consoles c ON g.console_id = c.id
+       ORDER BY g.created_at`
     );
 
-    const consolesResult = await db.query('SELECT id, name FROM consoles ORDER BY id');
+    const consolesResult = await db.query('SELECT id, name, launch_year FROM consoles ORDER BY id');
 
     const catalogResult = await db.query(
       DB_TYPE === 'sqlite'
@@ -87,15 +107,20 @@ router.get('/export', requireJWT, async (req, res) => {
         : 'SELECT igdb_id, title, console_name, cover_url, rating, release_date FROM game_catalog ORDER BY rating DESC NULLS LAST'
     );
 
-    const exportData = {
+    const wishlistResult = await db.query(
+      `SELECT gc.igdb_id, gc.title, gc.console_name, gc.cover_url, w.sort_order
+       FROM game_wishlist w JOIN game_catalog gc ON w.game_catalog_id = gc.id
+       ORDER BY w.sort_order`
+    );
+
+    res.json({
       exported_at: new Date().toISOString(),
       db_type: DB_TYPE,
       games: gamesResult.rows,
       consoles: consolesResult.rows,
+      wishlist: wishlistResult.rows.map((w) => ({ ...w, sort_order: Number(w.sort_order) })),
       catalog: catalogResult.rows,
-    };
-
-    res.json(exportData);
+    });
   } catch (error) {
     logger.error({ err: error }, 'Error exporting data');
     res.status(500).json({ error: 'Error exporting data' });
@@ -104,24 +129,25 @@ router.get('/export', requireJWT, async (req, res) => {
 
 router.post('/import', requireJWT, async (req, res) => {
   try {
-    const { games, consoles } = req.body;
+    const { games, consoles, wishlist } = req.body;
 
-    if (!Array.isArray(games) && !Array.isArray(consoles)) {
-      return res.status(400).json({ error: 'Provide games and/or consoles arrays' });
+    if (!Array.isArray(games) && !Array.isArray(consoles) && !Array.isArray(wishlist)) {
+      return res.status(400).json({ error: 'Provide games, consoles and/or wishlist arrays' });
     }
 
     const db = getDatabase();
     let importedConsoles = 0;
     let importedGames = 0;
+    let importedWishlist = 0;
 
     if (Array.isArray(consoles)) {
       for (const c of consoles) {
         if (c.name) {
           try {
             const insertSQL = DB_TYPE === 'sqlite'
-              ? 'INSERT OR IGNORE INTO consoles (name) VALUES (?)'
-              : 'INSERT INTO consoles (name) VALUES ($1) ON CONFLICT (name) DO NOTHING';
-            await db.query(insertSQL, [c.name.trim()]);
+              ? 'INSERT OR IGNORE INTO consoles (name, launch_year) VALUES (?, ?)'
+              : 'INSERT INTO consoles (name, launch_year) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING';
+            await db.query(insertSQL, [c.name.trim(), toInt(c.launch_year)]);
             importedConsoles++;
           } catch (err) {
             logger.warn({ err, name: c.name }, 'Skipping console import');
@@ -137,6 +163,9 @@ router.post('/import', requireJWT, async (req, res) => {
         consoleMap[row.name.toLowerCase()] = row.id;
       }
 
+      const columns = ['title', 'console_id', ...GAME_FIELDS];
+      const insertSQL = `INSERT INTO games (${columns.join(', ')}) VALUES (${placeholders(columns.length)})`;
+
       for (const g of games) {
         if (!g.title) continue;
         try {
@@ -144,20 +173,8 @@ router.post('/import', requireJWT, async (req, res) => {
           if (g.console_name && !consoleId) {
             consoleId = consoleMap[g.console_name.toLowerCase()] || null;
           }
-
-          const insertSQL = DB_TYPE === 'sqlite'
-            ? `INSERT INTO games (title, console_id, year_played, completed, image)
-               VALUES (?, ?, ?, ?, ?)`
-            : `INSERT INTO games (title, console_id, year_played, completed, image)
-               VALUES ($1, $2, $3, $4, $5)`;
-
-          await db.query(insertSQL, [
-            g.title,
-            consoleId,
-            g.year_played || null,
-            g.completed === true || g.completed === 1,
-            g.image || null,
-          ]);
+          const values = gameValues(g);
+          await db.query(insertSQL, [g.title, consoleId, ...GAME_FIELDS.map((f) => values[f])]);
           importedGames++;
         } catch (err) {
           logger.warn({ err, title: g.title }, 'Skipping game import');
@@ -165,11 +182,33 @@ router.post('/import', requireJWT, async (req, res) => {
       }
     }
 
-    logger.info({ importedConsoles, importedGames }, 'Import completed');
+    if (Array.isArray(wishlist)) {
+      for (const w of wishlist) {
+        try {
+          const catalogId = await resolveCatalogId(db, { ...w, igdb_id: toInt(w.igdb_id) });
+          if (!catalogId) continue;
+          const dup = await db.query(
+            `SELECT 1 FROM game_wishlist WHERE game_catalog_id = ${placeholders(1)}`,
+            [catalogId]
+          );
+          if (dup.rows.length > 0) continue;
+          await db.query(
+            `INSERT INTO game_wishlist (game_catalog_id, sort_order) VALUES (${placeholders(2)})`,
+            [catalogId, toInt(w.sort_order) ?? 0]
+          );
+          importedWishlist++;
+        } catch (err) {
+          logger.warn({ err, igdb_id: w.igdb_id }, 'Skipping wishlist import');
+        }
+      }
+    }
+
+    logger.info({ importedConsoles, importedGames, importedWishlist }, 'Import completed');
     res.json({
       message: 'Import completed',
       imported_consoles: importedConsoles,
       imported_games: importedGames,
+      imported_wishlist: importedWishlist,
     });
   } catch (error) {
     logger.error({ err: error }, 'Error importing data');

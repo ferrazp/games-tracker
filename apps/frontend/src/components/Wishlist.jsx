@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
+import { apiFetch, isSessionExpired } from '../api';
 
 function getCoverSrc(url) {
   if (!url) return null;
@@ -31,11 +32,12 @@ function Wishlist({ getHeaders }) {
     try {
       setError(null);
       setLoading(true);
-      const response = await fetch(`${API_URL}/wishlist`, { headers: getHeaders() });
+      const response = await apiFetch(`${API_URL}/wishlist`, { headers: getHeaders() });
       if (!response.ok) throw new Error('Error al cargar próximos juegos');
       const data = await response.json();
       setWishlist(data.games || []);
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setError(err.message);
     } finally {
       setLoading(false);
@@ -81,7 +83,7 @@ function Wishlist({ getHeaders }) {
     setOnlineSearching(true);
     setFeedback(null);
     try {
-      const response = await fetch(`${API_URL}/search/online`, {
+      const response = await apiFetch(`${API_URL}/search/online`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ query: searchQuery }),
@@ -93,6 +95,7 @@ function Wishlist({ getHeaders }) {
       const data = await response.json();
       setOnlineResults(data.results || []);
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     } finally {
       setOnlineSearching(false);
@@ -110,7 +113,7 @@ function Wishlist({ getHeaders }) {
             console_name: game.console_name || null,
             cover_url: game.cover?.url || null
           };
-      const response = await fetch(`${API_URL}/wishlist`, {
+      const response = await apiFetch(`${API_URL}/wishlist`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(body),
@@ -123,6 +126,7 @@ function Wishlist({ getHeaders }) {
       setOnlineResults([]);
       loadWishlist();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     }
   };
@@ -130,13 +134,14 @@ function Wishlist({ getHeaders }) {
   const removeFromWishlist = async (id) => {
     if (!window.confirm('¿Quitar de la lista?')) return;
     try {
-      const response = await fetch(`${API_URL}/wishlist/${id}`, {
+      const response = await apiFetch(`${API_URL}/wishlist/${id}`, {
         method: 'DELETE',
         headers: getHeaders(),
       });
       if (!response.ok) throw new Error('Error al quitar');
       loadWishlist();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     }
   };
@@ -156,7 +161,7 @@ function Wishlist({ getHeaders }) {
     }));
 
     try {
-      const response = await fetch(`${API_URL}/wishlist/reorder`, {
+      const response = await apiFetch(`${API_URL}/wishlist/reorder`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify({ items }),
@@ -164,6 +169,7 @@ function Wishlist({ getHeaders }) {
       if (!response.ok) throw new Error('Error al reordenar');
       loadWishlist();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     }
   };

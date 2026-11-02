@@ -22,6 +22,7 @@ games-tracker/
 │   └── ...                       # Assets estáticos
 ├── src/
 │   ├── config.js                 # API_URL centralizada
+│   ├── api.js                    # apiFetch: llamadas autenticadas; un 401 cierra la sesión y vuelve al login
 │   ├── App.jsx                   # Componente raíz, única fuente de datos
 │   ├── App.css                   # Estilos principales (cards, botones, feedback)
 │   ├── index.jsx                 # Entry point
@@ -135,6 +136,7 @@ El backend debe estar corriendo en `http://localhost:4000` (lo levanta `npm run 
 - **Campos backend:** snake_case (`console_id`, `year_played`, `console_name`)
 - **Estados locales:** camelCase (`consoleId`, `yearPlayed`) y se mapean al enviar
 - **Fetch nativo:** No se usa axios, solo `fetch()` del browser
+- **Llamadas autenticadas:** usar `apiFetch` de `src/api.js` (no `fetch`) y en el `catch` cortar con `if (isSessionExpired(err)) return;`
 - **CRUD completo:** GET (App), POST (GameForm), PUT/DELETE (GameList)
 
 ---

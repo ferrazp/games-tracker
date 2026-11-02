@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { es } from 'date-fns/locale';
 import API_URL from '../config';
+import { apiFetch, isSessionExpired } from '../api';
 import ConsoleImage from './ConsoleImage';
 
 function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
@@ -122,7 +123,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
     setOnlineSearching(true);
     setFeedback(null);
     try {
-      const response = await fetch(`${API_URL}/search/online`, {
+      const response = await apiFetch(`${API_URL}/search/online`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ query: game.title, console_id: game.consoleId || undefined }),
@@ -134,6 +135,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
       const data = await response.json();
       setOnlineResults(data.results || []);
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     } finally {
       setOnlineSearching(false);
@@ -178,7 +180,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
 
     if (!consoleId && selectedGame.platform_name) {
       try {
-        const response = await fetch(`${API_URL}/consoles`, {
+        const response = await apiFetch(`${API_URL}/consoles`, {
           method: 'POST',
           headers: getHeaders(),
           body: JSON.stringify({ name: selectedGame.platform_name }),
@@ -189,6 +191,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
           setConsoles(prev => [...prev, data.console]);
         }
       } catch (err) {
+        if (isSessionExpired(err)) return;
         // ignore — user can select manually
       }
     }
@@ -264,7 +267,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
     setFeedback(null);
 
     try {
-      const response = await fetch(`${API_URL}/games`, {
+      const response = await apiFetch(`${API_URL}/games`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
@@ -298,6 +301,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
       setTitleLocked(false);
       onGameAdded();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       setFeedback({ type: 'error', text: err.message });
     } finally {
       setSubmitting(false);
