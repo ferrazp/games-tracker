@@ -2,9 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { config, CURRENT_YEAR, CURRENT_MONTH } from '../../src/config.js';
 
+// Cada import necesita una URL única para no recibir el módulo cacheado de otro test.
+// Un contador (no Date.now(): dos tests en el mismo milisegundo compartían caché).
+let importCount = 0;
 function getConfigUrl() {
   const url = new URL('../../src/config.js', import.meta.url);
-  url.searchParams.set('t', Date.now());
+  url.searchParams.set('n', String(++importCount));
   return url.href;
 }
 
