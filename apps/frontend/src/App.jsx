@@ -6,6 +6,7 @@ import Login from './components/Login';
 import VersionBadge from './components/VersionBadge';
 import SidePanels from './components/SidePanels';
 import API_URL from './config';
+import { SESSION_EXPIRED_EVENT } from './api';
 import './App.css';
 
 const DEFAULT_FILTERS = {
@@ -34,6 +35,7 @@ function App() {
   const [selectedConsoleId, setSelectedConsoleId] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [showWishlist, setShowWishlist] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState('');
 
   const getHeaders = useCallback(() => {
     const headers = { 'Content-Type': 'application/json' };
@@ -101,18 +103,29 @@ function App() {
   }, []);
 
   const handleLogin = (newToken, newUser) => {
+    setSessionNotice('');
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setToken('');
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-  };
+  }, []);
+
+  // Token vencido: cualquier llamada autenticada que reciba 401 vuelve al login con un aviso.
+  useEffect(() => {
+    const onExpired = () => {
+      handleLogout();
+      setSessionNotice('Tu sesión expiró. Ingresá de nuevo para seguir.');
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [handleLogout]);
 
   const reloadGames = () => loadGames(filters);
   const handleGameDeleted = () => loadGames(filters);
@@ -123,7 +136,7 @@ function App() {
     return (
       <>
         <SidePanels consoleId={selectedConsoleId} />
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} notice={sessionNotice} />
       </>
     );
   }

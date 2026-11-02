@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import API_URL from '../config';
 
-function Login({ onLogin, onClose }) {
+function Login({ onLogin, onClose, notice = '' }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -54,6 +54,7 @@ function Login({ onLogin, onClose }) {
 
         <form onSubmit={handleSubmit} className="login-form" noValidate>
           {error && <div className="login-error">{error}</div>}
+          {!error && notice && <div className="login-notice" role="status">{notice}</div>}
 
           <div className="login-field">
             <label htmlFor="username">Usuario</label>

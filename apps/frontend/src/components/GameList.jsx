@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
+import { apiFetch, isSessionExpired } from '../api';
 import ConsoleImage from './ConsoleImage';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -39,6 +40,20 @@ function GameList({ games, total, onLoadMore, loadingMore = false, loading, erro
   const updateFilter = (key, value) => {
     onFilterChange({ ...filters, [key]: value });
   };
+
+  // Búsqueda por título con debounce: el input responde al instante y la lista se
+  // recarga 400 ms después de la última tecla (antes: una request por tecla).
+  const [searchText, setSearchText] = useState(filters.q || '');
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  useEffect(() => {
+    setSearchText(filters.q || '');
+  }, [filters.q]);
+  useEffect(() => {
+    if (searchText === (filtersRef.current.q || '')) return undefined;
+    const timer = setTimeout(() => onFilterChange({ ...filtersRef.current, q: searchText }), 400);
+    return () => clearTimeout(timer);
+  }, [searchText, onFilterChange]);
 
   const clearFilters = () => {
     onFilterChange({
@@ -132,7 +147,7 @@ function GameList({ games, total, onLoadMore, loadingMore = false, loading, erro
     }
     try {
       setSaving(id);
-      const response = await fetch(`${API_URL}/games/${id}`, {
+      const response = await apiFetch(`${API_URL}/games/${id}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(payload)
@@ -143,6 +158,7 @@ function GameList({ games, total, onLoadMore, loadingMore = false, loading, erro
       if (onConsoleSelect) onConsoleSelect(null);
       onGameUpdated();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       alert('Error al guardar cambios: ' + err.message);
     } finally {
       setSaving(null);
@@ -153,10 +169,11 @@ function GameList({ games, total, onLoadMore, loadingMore = false, loading, erro
     if (!window.confirm('¿Eliminar este juego?')) return;
     try {
       setDeleting(id);
-      const response = await fetch(`${API_URL}/games/${id}`, { method: 'DELETE', headers: getHeaders() });
+      const response = await apiFetch(`${API_URL}/games/${id}`, { method: 'DELETE', headers: getHeaders() });
       if (!response.ok) throw new Error('Error al eliminar');
       onGameDeleted();
     } catch (err) {
+      if (isSessionExpired(err)) return;
       alert('Error al eliminar: ' + err.message);
     } finally {
       setDeleting(null);
@@ -190,8 +207,8 @@ function GameList({ games, total, onLoadMore, loadingMore = false, loading, erro
           type="text"
           className="game-filter-input"
           placeholder="Buscar por título..."
-          value={filters.q}
-          onChange={e => updateFilter('q', e.target.value)}
+          value={searchText}
+          onChange={e => setSearchText(e.target.value)}
         />
         <div className="game-filter-console-wrapper" ref={filterConsoleRef}>
           <button

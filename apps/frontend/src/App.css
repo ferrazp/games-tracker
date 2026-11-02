@@ -1167,6 +1167,17 @@ form > button[type="submit"]:disabled {
   text-align: center;
 }
 
+.login-notice {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(241, 196, 15, 0.12);
+  color: #f5c542;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  text-align: center;
+}
+
 .login-field {
   display: flex;
   flex-direction: column;
