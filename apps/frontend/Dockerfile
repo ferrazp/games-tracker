@@ -1,6 +1,6 @@
 # Se construye desde la raíz del monorepo:
 #   docker build -f apps/frontend/Dockerfile -t games-tracker-frontend .
-FROM node:24-slim AS builder
+FROM node:26-slim AS builder
 
 WORKDIR /app
 
