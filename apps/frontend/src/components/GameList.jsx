@@ -4,7 +4,7 @@ import ConsoleImage from './ConsoleImage';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated, onConsoleSelect, filters = {}, onFilterChange }) {
+function GameList({ games, total, onLoadMore, loadingMore = false, loading, error, onRefresh, onGameDeleted, onGameUpdated, getHeaders, isAuthenticated, onConsoleSelect, filters = {}, onFilterChange }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [deleting, setDeleting] = useState(null);
@@ -348,7 +348,7 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
 
   return (
     <div className="game-list">
-      <h2>Lista de Juegos ({games.length})</h2>
+      <h2>Lista de Juegos ({total ?? games.length})</h2>
       {filterBar}
       {games.map(game => (
         <div key={game.id} className="game-card">
@@ -539,6 +539,14 @@ function GameList({ games, loading, error, onRefresh, onGameDeleted, onGameUpdat
           )}
         </div>
       ))}
+      {onLoadMore && total > games.length && (
+        <div className="game-list-more">
+          <span className="game-list-more-count">Mostrando {games.length} de {total}</span>
+          <button type="button" onClick={onLoadMore} disabled={loadingMore} className="btn btn-secondary">
+            {loadingMore ? 'Cargando...' : 'Cargar más'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

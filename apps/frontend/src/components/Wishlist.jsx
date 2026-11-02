@@ -83,7 +83,7 @@ function Wishlist({ getHeaders }) {
     try {
       const response = await fetch(`${API_URL}/search/online`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ query: searchQuery }),
       });
       if (!response.ok) {

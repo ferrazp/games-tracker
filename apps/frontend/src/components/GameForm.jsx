@@ -124,7 +124,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
     try {
       const response = await fetch(`${API_URL}/search/online`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({ query: game.title, console_id: game.consoleId || undefined }),
       });
       if (!response.ok) {
