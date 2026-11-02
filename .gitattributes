@@ -3,3 +3,5 @@
 *.ico binary
 *.jpg binary
 *.db binary
+*.cmd text eol=crlf
+*.bat text eol=crlf
