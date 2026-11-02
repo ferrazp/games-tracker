@@ -24,7 +24,7 @@ jobs:
       matrix:
         app: [backend, frontend]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.version && format('v{0}', inputs.version) || github.sha }}
       - uses: docker/setup-buildx-action@v4
@@ -34,7 +34,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/ferrazp/games-tracker-${{ matrix.app }}
           flavor: latest=false
@@ -44,7 +44,7 @@ jobs:
             type=semver,pattern={{version}},value=${{ inputs.version }},enable=${{ !!inputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }},enable=${{ !!inputs.version }}
             type=raw,value=latest,enable=${{ !!inputs.version }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/${{ matrix.app }}/Dockerfile
