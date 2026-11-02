@@ -1,9 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+// URL única por import (contador, no Date.now(): dos tests en el mismo milisegundo compartían caché).
+let importCount = 0;
 function getLoggerUrl() {
   const url = new URL('../../db/logger.js', import.meta.url);
-  url.searchParams.set('t', Date.now());
+  url.searchParams.set('n', String(++importCount));
   return url.href;
 }
 

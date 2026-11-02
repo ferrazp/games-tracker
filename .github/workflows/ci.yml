@@ -42,6 +42,11 @@ jobs:
           tags: gt-frontend:ci
           cache-from: type=gha,scope=frontend
       - name: Frontend bundle uses relative API
+        # Falla si no hay bundle (antes un glob vacío pasaba) o si apunta a localhost:4000.
         run: |
-          docker run --rm --entrypoint sh gt-frontend:ci -c \
-            "! grep -l 'localhost:4000' /usr/share/nginx/html/assets/*.js"
+          docker run --rm --entrypoint sh gt-frontend:ci -c '
+            set -e
+            ls /usr/share/nginx/html/assets/*.js > /dev/null
+            if grep -l "localhost:4000" /usr/share/nginx/html/assets/*.js; then
+              echo "El bundle apunta a localhost:4000"; exit 1
+            fi'

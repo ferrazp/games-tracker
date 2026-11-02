@@ -8,7 +8,9 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         { "type": "json", "path": "apps/backend/package.json", "jsonpath": "$.version" },
-        { "type": "json", "path": "apps/frontend/package.json", "jsonpath": "$.version" }
+        { "type": "json", "path": "apps/frontend/package.json", "jsonpath": "$.version" },
+        { "type": "json", "path": "package-lock.json", "jsonpath": "$.packages['apps/backend'].version" },
+        { "type": "json", "path": "package-lock.json", "jsonpath": "$.packages['apps/frontend'].version" }
       ],
       "changelog-sections": [
         { "type": "feat", "section": "Funcionalidades" },
