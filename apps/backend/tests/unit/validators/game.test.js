@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateGameData, parseGameData } from '../../../src/validators/game.js';
+import { validateGameData, parseGameData, parseIgdbId } from '../../../src/validators/game.js';
 import { CURRENT_YEAR } from '../../../src/config.js';
 
 describe('validateGameData', () => {
@@ -203,5 +203,36 @@ describe('parseGameData', () => {
   it('trims title whitespace', () => {
     const r = parseGameData({ title: '  Hello World  ' });
     assert.equal(r.title, 'Hello World');
+  });
+});
+
+describe('igdb_id', () => {
+  it('parseIgdbId acepta enteros positivos y strings de dígitos', () => {
+    assert.equal(parseIgdbId(427), 427);
+    assert.equal(parseIgdbId('427'), 427);
+  });
+
+  it('parseIgdbId rechaza lo que no es un entero positivo escrito como tal', () => {
+    for (const bad of [true, false, '0x10', '1e3', [5], 0, '0', -3, 1.5, ' 5', '5 ', '', null, undefined, {}, '99999999999999999999']) {
+      assert.equal(parseIgdbId(bad), null, JSON.stringify(bad));
+    }
+  });
+
+  it('validateGameData rechaza igdb_id true, hex, exponente o array', () => {
+    for (const igdb_id of [true, '0x10', '1e3', [5]]) {
+      const r = validateGameData({ title: 'X', igdb_id });
+      assert.equal(r.valid, false, JSON.stringify(igdb_id));
+      assert.match(r.error, /igdb_id/);
+    }
+  });
+
+  it('validateGameData acepta igdb_id número, string de dígitos, vacío o null', () => {
+    for (const igdb_id of [5, '5', '', null, undefined]) {
+      assert.equal(validateGameData({ title: 'X', igdb_id }).valid, true, JSON.stringify(igdb_id));
+    }
+  });
+
+  it('parseGameData convierte el igdb_id string a número', () => {
+    assert.equal(parseGameData({ title: 'X', igdb_id: '427' }).igdb_id, 427);
   });
 });

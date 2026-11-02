@@ -159,7 +159,9 @@ describe('API de sagas', () => {
   it('PUT /games/:id/igdb valida el body y el juego', async () => {
     const sinToken = await request(getApp()).put(`/games/${pendingGameId}/igdb`).send({ igdb_id: 1 });
     assert.equal(sinToken.status, 401);
-    for (const bad of [{}, { igdb_id: 'x' }, { igdb_id: 1.5 }, { igdb_id: -3 }, { igdb_id: 0 }]) {
+    const bads = [{}, { igdb_id: 'x' }, { igdb_id: 1.5 }, { igdb_id: -3 }, { igdb_id: 0 },
+      { igdb_id: true }, { igdb_id: '0x10' }, { igdb_id: '1e3' }, { igdb_id: [5] }, { igdb_id: '0' }, { igdb_id: '' }];
+    for (const bad of bads) {
       const res = await request(getApp()).put(`/games/${pendingGameId}/igdb`).set('Authorization', getAuth()).send(bad);
       assert.equal(res.status, 400, JSON.stringify(bad));
     }
@@ -174,6 +176,15 @@ describe('API de sagas', () => {
     assert.equal(rows[0].igdb_id, 9);
     assert.equal(rows[0].igdb_match, 'manual');
     assert.equal(rows[0].igdb_candidates, null);
+  });
+
+  it('PUT /games/:id/igdb acepta el id como string de dígitos', async () => {
+    const res = await request(getApp()).put(`/games/${unresolvedGameId}/igdb`).set('Authorization', getAuth()).send({ igdb_id: '9' });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.igdb_id, 9);
+    const { rows } = await db().query('SELECT igdb_id, igdb_match FROM games WHERE id = ?', [unresolvedGameId]);
+    assert.equal(rows[0].igdb_id, 9);
+    assert.equal(rows[0].igdb_match, 'manual');
   });
 
   it('PUT /games/:id/igdb con null saca al juego de su saga', async () => {

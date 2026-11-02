@@ -6,6 +6,7 @@ import { requireJWT } from '../middleware/auth.js';
 import { createIgdbClient } from '../services/igdb-client.js';
 import { syncSagas, getStatusByCanonical, sql } from '../services/sagas-sync.js';
 import { buildSagaDetail, suggestedVersion, searchLinks, releaseYear } from '../services/sagas-logic.js';
+import { parseIgdbId } from '../validators/game.js';
 
 const router = Router();
 
@@ -211,9 +212,9 @@ router.put('/games/:id/igdb', requireJWT, async (req, res) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(404).json({ error: 'Game not found' });
-    const igdbId = req.body?.igdb_id;
-    const isNull = igdbId === null;
-    if (!isNull && !(Number.isInteger(igdbId) && igdbId > 0)) {
+    const isNull = req.body?.igdb_id === null;
+    const igdbId = isNull ? null : parseIgdbId(req.body?.igdb_id);
+    if (!isNull && igdbId === null) {
       return res.status(400).json({ error: 'igdb_id must be a positive integer or null' });
     }
 

@@ -1,5 +1,14 @@
 import { CURRENT_YEAR } from '../config.js';
 
+// Id de IGDB: solo un entero positivo o un string de dígitos ('427').
+// Devuelve el número, o null si no es válido (true, '0x10', '1e3', [5]...).
+export function parseIgdbId(value) {
+  let n = null;
+  if (typeof value === 'number') n = value;
+  else if (typeof value === 'string' && /^\d+$/.test(value)) n = Number(value);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
 export function validateGameData(data) {
   const { title, console_id, year_played, month_played, year_completed, month_completed, hours_played, release_year, image } = data;
 
@@ -67,8 +76,7 @@ export function validateGameData(data) {
   }
 
   if (data.igdb_id !== undefined && data.igdb_id !== null && data.igdb_id !== '') {
-    const n = typeof data.igdb_id === 'number' ? data.igdb_id : Number(data.igdb_id);
-    if (!Number.isInteger(n) || n < 1) {
+    if (parseIgdbId(data.igdb_id) === null) {
       return { valid: false, error: 'igdb_id must be a positive integer' };
     }
   }
@@ -104,6 +112,6 @@ export function parseGameData(data) {
     release_year: rawReleaseYear !== undefined && rawReleaseYear !== null && rawReleaseYear !== ''
       ? parseInt(rawReleaseYear, 10) : null,
     igdb_id: data.igdb_id !== undefined && data.igdb_id !== null && data.igdb_id !== ''
-      ? Number(data.igdb_id) : null
+      ? parseIgdbId(data.igdb_id) : null
   };
 }
