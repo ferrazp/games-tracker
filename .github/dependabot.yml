@@ -5,7 +5,8 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: "build(deps)"
+      prefix: "fix(deps)"
+      prefix-development: "build(deps-dev)"
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
@@ -25,7 +26,7 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: "build(docker)"
+      prefix: "fix(docker)"
     groups:
       docker-minor-patch:
         update-types: [minor, patch]
