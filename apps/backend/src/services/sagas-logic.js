@@ -16,18 +16,28 @@ export function largestCollection(collections) {
   return { id: best.id, name: best.name };
 }
 
+const REMAKE = 8;
+
+// Canónico: un remake (es juego propio aunque tenga version_parent) o un juego
+// principal sin version_parent. IGDB marca algunas ediciones (Collector's,
+// Chosen Edition…) como principal pero con version_parent: esas no lo son.
+export function isCanonicalGame(game) {
+  if (game.game_type === REMAKE) return true;
+  return SAGA_GAME_TYPES.includes(game.game_type) && idOf(game.version_parent) == null;
+}
+
 export function canonicalId(game) {
-  if (SAGA_GAME_TYPES.includes(game.game_type)) return game.id;
+  if (isCanonicalGame(game)) return game.id;
   return idOf(game.version_parent) ?? idOf(game.parent_game) ?? game.id;
 }
 
-// Sube por version_parent / parent_game hasta un juego principal o remake.
+// Sube por version_parent / parent_game hasta un juego canónico (ver isCanonicalGame).
 // Devuelve { canonical } (null si no se llega en maxHops o no hay padre) o
 // { missing: id } si hace falta pedir a IGDB un padre que no está en byId.
 export function climbToCanonical(game, byId, maxHops = 3) {
   let current = game;
   for (let hops = 0; ; hops += 1) {
-    if (SAGA_GAME_TYPES.includes(current.game_type)) return { canonical: current };
+    if (isCanonicalGame(current)) return { canonical: current };
     const parent = idOf(current.version_parent) ?? idOf(current.parent_game);
     if (parent == null || hops === maxHops) return { canonical: null };
     const next = byId.get(parent);

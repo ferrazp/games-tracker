@@ -3,7 +3,7 @@
 import { SQLiteClient } from '../../db/database.js';
 import { IGDB_PLATFORM_TO_CONSOLE } from './igdb.js';
 import {
-  SAGA_GAME_TYPES,
+  isCanonicalGame,
   largestCollection,
   climbToCanonical,
   mergeStatus,
@@ -178,10 +178,14 @@ async function resolvePending(db, igdb, now) {
   return resolved;
 }
 
+// Mismo nombre que game_catalog.console_name, para que el Sugerir no duplique plataformas.
+const versionLabels = (g) =>
+  (g.platforms ?? []).map((p) => IGDB_PLATFORM_TO_CONSOLE[p.id] ?? p.name).filter(Boolean);
+
 function versionsOf(game) {
   const best = new Map();
   const add = (source, year) => {
-    for (const label of platformNames(source)) {
+    for (const label of versionLabels(source)) {
       const prev = best.get(label);
       if (!best.has(label) || (year != null && (prev == null || year > prev))) best.set(label, year);
     }
@@ -200,7 +204,7 @@ async function refreshSaga(db, igdb, sagaId, now) {
   // Una respuesta vacía no se toma como "la saga quedó sin juegos": se reintenta luego.
   if (members.length === 0) return false;
   const games = members.filter(
-    (g) => SAGA_GAME_TYPES.includes(g.game_type) && largestCollection(g.collections)?.id === sagaId
+    (g) => isCanonicalGame(g) && largestCollection(g.collections)?.id === sagaId
   );
   const upsert = isSqlite(db)
     ? `INSERT OR REPLACE INTO saga_games (igdb_id, saga_id, name, release_year, game_type, cover_url, versions)

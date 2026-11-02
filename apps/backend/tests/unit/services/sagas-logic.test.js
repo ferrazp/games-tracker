@@ -5,6 +5,7 @@ import {
   largestCollection,
   canonicalId,
   climbToCanonical,
+  isCanonicalGame,
   statusOf,
   mergeStatus,
   releaseYear,
@@ -51,6 +52,9 @@ describe('sagas-logic', () => {
     it('parent_game como objeto', () => {
       assert.equal(canonicalId({ id: 14723, game_type: 2, parent_game: { id: 386 } }), 386);
     });
+    it('una edición tipo 0 con version_parent apunta a su juego base', () => {
+      assert.equal(canonicalId({ id: 263210, game_type: 0, version_parent: 136560 }), 136560);
+    });
     it('sin padres es él mismo', () => {
       assert.equal(canonicalId({ id: 5, game_type: 11 }), 5);
     });
@@ -84,6 +88,37 @@ describe('sagas-logic', () => {
       ]);
       assert.deepEqual(climbToCanonical(chain.get(2), chain), { canonical: chain.get(5) });
       assert.deepEqual(climbToCanonical(chain.get(1), chain), { canonical: null });
+    });
+
+    // Ediciones que IGDB marca como main game (tipo 0) pero con version_parent.
+    const ffXVI = { id: 136560, name: 'Final Fantasy XVI', game_type: 0 };
+    const ffXVICollector = { id: 263210, name: "Final Fantasy XVI: Collector's Edition", game_type: 0, version_parent: 136560 };
+    const tos = { id: 1217, name: 'Tales of Symphonia', game_type: 0 };
+    const tosRemastered = { id: 103329, name: 'Tales of Symphonia Remastered', game_type: 9, version_parent: { id: 1217 } };
+    const tosChosen = { id: 222001, name: 'Tales of Symphonia Remastered: Chosen Edition', game_type: 0, version_parent: 103329 };
+    const editions = new Map([ffXVI, ffXVICollector, tos, tosRemastered, tosChosen].map((g) => [g.id, g]));
+
+    it('una edición tipo 0 con version_parent sube a su juego base', () => {
+      assert.deepEqual(climbToCanonical(ffXVICollector, editions), { canonical: ffXVI });
+    });
+    it('una edición tipo 0 de un remaster sube hasta el juego original', () => {
+      assert.deepEqual(climbToCanonical(tosChosen, editions), { canonical: tos });
+    });
+    it('una edición tipo 0 pide su version_parent si falta', () => {
+      assert.deepEqual(climbToCanonical(ffXVICollector, new Map()), { missing: 136560 });
+    });
+    it('un remake con version_parent sigue siendo canónico propio', () => {
+      const remake = { id: 11169, game_type: 8, version_parent: 427 };
+      assert.deepEqual(climbToCanonical(remake, new Map()), { canonical: remake });
+    });
+  });
+
+  describe('isCanonicalGame', () => {
+    it('principal sin version_parent o remake son canónicos; edición con version_parent no', () => {
+      assert.equal(isCanonicalGame({ id: 1, game_type: 0 }), true);
+      assert.equal(isCanonicalGame({ id: 1, game_type: 8, version_parent: 2 }), true);
+      assert.equal(isCanonicalGame({ id: 1, game_type: 0, version_parent: 2 }), false);
+      assert.equal(isCanonicalGame({ id: 1, game_type: 9 }), false);
     });
   });
 

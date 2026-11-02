@@ -286,6 +286,44 @@ describe('syncSagas', () => {
     assert.deepEqual(result, { resolved: 0, refreshed: 0 });
   });
 
+  it('las ediciones tipo 0 con version_parent se resuelven a su base y no cuentan como juegos de la saga', async () => {
+    const TALES = { id: 112, name: 'Tales of', games: ids(5, 300) };
+    const FF16 = { id: 39, name: 'Final Fantasy', games: ids(6, 1) };
+    const ffXVI = { id: 136560, name: 'Final Fantasy XVI', game_type: 0, collections: [FF16] };
+    const ffXVICollector = { id: 263210, name: "Final Fantasy XVI: Collector's Edition", game_type: 0, version_parent: 136560, collections: [FF16] };
+    const tos = { id: 1217, name: 'Tales of Symphonia', game_type: 0, collections: [TALES] };
+    const tosRemastered = { id: 103329, name: 'Tales of Symphonia Remastered', game_type: 9, version_parent: 1217, collections: [TALES] };
+    const tosChosen = { id: 222001, name: 'Tales of Symphonia Remastered: Chosen Edition', game_type: 0, version_parent: 103329, collections: [TALES] };
+    const remakeWithParent = { id: 11169, name: 'Some Remake', game_type: 8, version_parent: 1217, collections: [TALES] };
+    await addGame({ title: "Final Fantasy XVI: Collector's Edition", igdb_id: 263210, igdb_match: 'selected' });
+    await addGame({ title: 'Tales of Symphonia Remastered: Chosen Edition', igdb_id: 222001, igdb_match: 'selected' });
+    const igdb = fakeIgdb({
+      games: Object.fromEntries([ffXVI, ffXVICollector, tos, tosRemastered, tosChosen].map((g) => [g.id, g])),
+      members: { 39: [ffXVI, ffXVICollector], 112: [tos, tosRemastered, tosChosen, remakeWithParent] },
+    });
+
+    await syncSagas(db, igdb);
+
+    const { rows: res } = await db.query('SELECT igdb_id, canonical_igdb_id, saga_id FROM igdb_resolution ORDER BY igdb_id');
+    assert.deepEqual(res.map((r) => [r.igdb_id, r.canonical_igdb_id, r.saga_id]), [[222001, 1217, 112], [263210, 136560, 39]]);
+    const { rows: sg } = await db.query('SELECT igdb_id, saga_id FROM saga_games ORDER BY igdb_id');
+    assert.deepEqual(sg.map((g) => [g.igdb_id, g.saga_id]), [[1217, 112], [11169, 112], [136560, 39]]);
+  });
+
+  it('las versiones usan el nombre de consola de la app según el id de plataforma de IGDB', async () => {
+    await addGame({ title: 'Final Fantasy IX', igdb_id: 415, igdb_match: 'selected' });
+    const ffIXPs1 = { ...ffIX, platforms: [{ id: 7, name: 'PlayStation' }, { id: 999, name: 'Rara' }] };
+    const igdb = fakeIgdb({ games: { 415: ffIXPs1 }, members: { 39: [ffIXPs1] } });
+
+    await syncSagas(db, igdb);
+
+    const { rows } = await db.query('SELECT versions FROM saga_games WHERE igdb_id = 415');
+    assert.deepEqual(JSON.parse(rows[0].versions), [
+      { label: 'PlayStation 1', year: 2000 },
+      { label: 'Rara', year: 2000 },
+    ]);
+  });
+
   it('guarda la resolución con saga_id nulo si el juego no está en ninguna serie', async () => {
     await addGame({ title: 'Loner', igdb_id: 9000, igdb_match: 'selected' });
     const igdb = fakeIgdb({ games: { 9000: { id: 9000, name: 'Loner', game_type: 0 } } });
