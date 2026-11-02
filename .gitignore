@@ -1,0 +1,43 @@
+# Dependencias
+node_modules/
+
+# Entorno y secretos
+.env
+.env.local
+.env.*.local
+deploy/*.env
+deploy/.prod-version
+deploy/.qa-version
+
+# Bases de datos locales
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Build y cobertura
+dist/
+build/
+coverage/
+
+# Logs y temporales
+*.log
+npm-debug.log*
+tmp/
+temp/
+*.tmp
+uploads/
+.docker/
+
+# SO / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*~
+
+# Espacio de trabajo de agentes
+.superpowers/

@@ -1,0 +1,24 @@
+{
+  "name": "games-tracker",
+  "version": "1.4.1",
+  "private": true,
+  "description": "Games Tracker: registro personal de videojuegos (monorepo backend + frontend)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "npm test --workspaces && node --test \"deploy/scripts/test/*.test.mjs\"",
+    "build": "npm run build -w games-tracker",
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w games-backend\" \"npm start -w games-tracker\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "sqlite3": true
+  }
+}
