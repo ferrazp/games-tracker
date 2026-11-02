@@ -395,3 +395,18 @@ Authorization: Bearer <token>
 **Errores**:
 - `400 Bad Request`: id inválido
 - `404 Not Found`: el item no existe
+
+### Sagas
+
+Datos cacheados de IGDB (los arma el job de sagas; ver [OPERACION.md](../../../../docs/OPERACION.md#sagas)).
+
+| Endpoint | Método | Auth | Qué hace |
+|---|---|---|---|
+| `/sagas` | GET | — | `{ configured, unresolved_count, sagas: [{ id, name, counts, covers }] }` |
+| `/sagas/:id` | GET | — | Detalle: `counts` y `groups` por año con el estado de cada juego (`completed`, `pending`, `missing`); 404 si no hay juegos registrados de esa saga |
+| `/sagas/:id/refresh` | POST | JWT | Vuelve a pedir la saga a IGDB y devuelve el detalle; 503 sin credenciales, 502 si falla IGDB |
+| `/sagas/games/:igdbId/suggest` | GET | — | Versiones (plataformas con año), versión sugerida y links de búsqueda |
+| `/sagas/unresolved` | GET | JWT | Juegos con `igdb_match = 'unresolved'` y sus candidatos |
+| `/games/:id/igdb` | PUT | JWT | Body `{ "igdb_id": 427 }` (entero positivo o string de dígitos) → `manual`; `{ "igdb_id": null }` → `none` (fuera de las sagas) |
+
+`igdb_id` en `POST /games` y `PUT /games/:id` acepta lo mismo (entero positivo o string de dígitos). En `PUT /games/:id` sin `igdb_id` se conserva el vínculo, salvo que cambie el título: ahí se limpia y lo vuelve a buscar el backfill. Después de crear o editar un juego (y de `PUT /games/:id/igdb`) se disparan los jobs de sagas en segundo plano si hay credenciales de IGDB.
