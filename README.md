@@ -9,7 +9,7 @@ Registro personal de los videojuegos que jugué en mi vida: qué jugué, en qué
 
 | | |
 |---|---|
-| [`apps/backend`](apps/backend) | API REST — Node 24, Express 5, PostgreSQL 17 (SQLite en desarrollo), JWT, IGDB/Twitch |
+| [`apps/backend`](apps/backend) | API REST — Node 26, Express 5, PostgreSQL 17 (SQLite en desarrollo), JWT, IGDB/Twitch |
 | [`apps/frontend`](apps/frontend) | Web — React 19 + Vite 7 |
 | [`deploy`](deploy) | Docker Compose de QA y Producción y scripts de operación (deploy, backup, restore, rollback) |
 | [`docs`](docs) | [Operación](docs/OPERACION.md), diseño y planes |
@@ -43,7 +43,7 @@ Publicar una versión nueva en producción: [`docs/OPERACION.md`](docs/OPERACION
 
 ## Desarrollo
 
-Requisitos: Node 24 (`.nvmrc`), Docker Desktop para QA y Producción.
+Requisitos: Node 26 (`.nvmrc`), Docker Desktop para QA y Producción.
 
 ```bash
 git clone https://github.com/ferrazp/games-tracker.git

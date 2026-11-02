@@ -1,6 +1,6 @@
 # Se construye desde la raíz del monorepo:
 #   docker build -f apps/backend/Dockerfile -t games-tracker-backend .
-FROM node:24-slim AS deps
+FROM node:26-slim AS deps
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY apps/frontend/package.json apps/frontend/
 # husky (prepare) es solo para desarrollo
 RUN npm pkg delete scripts.prepare && npm ci -w games-backend --omit=dev --no-audit --no-fund
 
-FROM node:24-slim AS runner
+FROM node:26-slim AS runner
 
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/ferrazp/games-tracker" \

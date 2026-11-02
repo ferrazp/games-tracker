@@ -4,7 +4,7 @@ API REST para tracking personal de videojuegos. Permite gestionar una colección
 
 ## Stack
 
-- **Runtime:** Node.js 24
+- **Runtime:** Node.js 26
 - **Framework:** Express
 - **Base de datos:** PostgreSQL 17 (QA/Prod en Docker) / SQLite (desarrollo local)
 - **Catálogo:** IGDB API (Twitch) — +7800 juegos precargados
