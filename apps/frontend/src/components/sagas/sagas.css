@@ -1,0 +1,100 @@
+/* ===== SAGAS ===== */
+.sagas {
+  margin-top: 8px;
+}
+
+.saga-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.saga-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.saga-card:hover,
+.saga-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #667eea;
+  outline: none;
+}
+
+.saga-collage {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 90px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.saga-collage-slot {
+  border-right: 1px solid #1b1d2a;
+  overflow: hidden;
+}
+
+.saga-collage-slot:last-child {
+  border-right: none;
+}
+
+.saga-collage-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.saga-card-body {
+  padding: 8px 10px 10px;
+  font-size: 12px;
+}
+
+.saga-card-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.saga-bar {
+  display: flex;
+  height: 6px;
+  margin: 6px 0 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.saga-bar-completed {
+  background: #2ecc71;
+}
+
+.saga-bar-pending {
+  background: #f1c40f;
+}
+
+.saga-card-counts {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.saga-unresolved-notice {
+  display: block;
+  margin: 0 0 16px;
+  padding: 8px 14px;
+  border: 1px solid #f1c40f;
+  border-radius: 8px;
+  background: rgba(241, 196, 15, 0.12);
+  color: #f1c40f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.saga-unresolved-notice:hover {
+  background: rgba(241, 196, 15, 0.2);
+}

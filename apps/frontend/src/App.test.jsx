@@ -72,6 +72,30 @@ test('renders games list with edit/delete buttons', async () => {
   expect(deleteButtons).toHaveLength(2);
 });
 
+test('la pestaña Sagas pide /sagas', async () => {
+  localStorage.setItem('token', 'test-token');
+  localStorage.setItem('user', JSON.stringify({ username: 'testuser', id: 1 }));
+  global.fetch = vi.fn().mockImplementation((url) =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      json: async () => {
+        if (url.includes('/sagas')) return { configured: true, unresolved_count: 0, sagas: [] };
+        if (url.includes('/games')) return { games: [] };
+        return { consoles: [] };
+      },
+    })
+  );
+
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(screen.getByRole('button', { name: 'Sagas' }));
+
+  await waitFor(() => {
+    expect(global.fetch.mock.calls.some(([u]) => u.includes('/sagas'))).toBe(true);
+  });
+});
+
 test('logout clears token and shows login screen', async () => {
   localStorage.setItem('token', 'test-token');
   localStorage.setItem('user', JSON.stringify({ username: 'testuser', id: 1 }));

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import GameForm from './components/GameForm';
 import GameList from './components/GameList';
 import Wishlist from './components/Wishlist';
+import Sagas from './components/sagas/Sagas';
 import Login from './components/Login';
 import VersionBadge from './components/VersionBadge';
 import SidePanels from './components/SidePanels';
@@ -34,7 +35,7 @@ function App() {
   });
   const [selectedConsoleId, setSelectedConsoleId] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [showWishlist, setShowWishlist] = useState(false);
+  const [activeTab, setActiveTab] = useState('games');
   const [sessionNotice, setSessionNotice] = useState('');
 
   const getHeaders = useCallback(() => {
@@ -157,21 +158,30 @@ function App() {
       <div className="app-tabs">
         <button
           type="button"
-          className={`app-tab ${!showWishlist ? 'active' : ''}`}
-          onClick={() => setShowWishlist(false)}
+          className={`app-tab ${activeTab === 'games' ? 'active' : ''}`}
+          onClick={() => setActiveTab('games')}
         >
           Lista de Juegos
         </button>
         <button
           type="button"
-          className={`app-tab ${showWishlist ? 'active' : ''}`}
-          onClick={() => setShowWishlist(true)}
+          className={`app-tab ${activeTab === 'wishlist' ? 'active' : ''}`}
+          onClick={() => setActiveTab('wishlist')}
         >
           Próximos Juegos
         </button>
+        <button
+          type="button"
+          className={`app-tab ${activeTab === 'sagas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sagas')}
+        >
+          Sagas
+        </button>
       </div>
-      {showWishlist ? (
+      {activeTab === 'wishlist' ? (
         <Wishlist getHeaders={getHeaders} />
+      ) : activeTab === 'sagas' ? (
+        <Sagas getHeaders={getHeaders} isAuthenticated={!!token} />
       ) : (
         <>
           <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
