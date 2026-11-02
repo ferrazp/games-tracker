@@ -66,6 +66,13 @@ export function validateGameData(data) {
     }
   }
 
+  if (data.igdb_id !== undefined && data.igdb_id !== null && data.igdb_id !== '') {
+    const n = typeof data.igdb_id === 'number' ? data.igdb_id : Number(data.igdb_id);
+    if (!Number.isInteger(n) || n < 1) {
+      return { valid: false, error: 'igdb_id must be a positive integer' };
+    }
+  }
+
   return { valid: true };
 }
 
@@ -95,6 +102,8 @@ export function parseGameData(data) {
     completed: data.completed === true || data.completed === 'true',
     image: data.image || null,
     release_year: rawReleaseYear !== undefined && rawReleaseYear !== null && rawReleaseYear !== ''
-      ? parseInt(rawReleaseYear, 10) : null
+      ? parseInt(rawReleaseYear, 10) : null,
+    igdb_id: data.igdb_id !== undefined && data.igdb_id !== null && data.igdb_id !== ''
+      ? Number(data.igdb_id) : null
   };
 }

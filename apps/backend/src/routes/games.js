@@ -14,7 +14,7 @@ function parseId(raw) {
 async function fetchGameById(db, id) {
   if (DB_TYPE === 'sqlite') {
     const result = await db.query(
-      `SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at, g.release_year
+      `SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, c.name as console_name, c.id as console_id, g.created_at, g.updated_at, g.release_year, g.igdb_id, g.igdb_match
        FROM games g
        LEFT JOIN consoles c ON g.console_id = c.id
        WHERE g.id = ?`,
@@ -109,7 +109,7 @@ router.get('/games', async (req, res) => {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const selectSQL = `
-      SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, g.release_year,
+      SELECT g.id, g.title, g.year_played, g.month_played, g.year_completed, g.month_completed, g.hours_played, g.completed, g.image, g.release_year, g.igdb_id, g.igdb_match,
              c.name as console_name, c.id as console_id,
              g.created_at, g.updated_at
       FROM games g
@@ -204,10 +204,11 @@ router.post('/games', requireJWT, async (req, res) => {
     }
 
     const insertSQL = DB_TYPE === 'sqlite'
-      ? 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      : 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id';
+      ? 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year, igdb_id, igdb_match) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      : 'INSERT INTO games (title, console_id, year_played, month_played, year_completed, month_completed, hours_played, completed, image, release_year, igdb_id, igdb_match) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id';
 
-    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year];
+    const igdbMatch = data.igdb_id !== null ? 'selected' : null;
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, data.igdb_id, igdbMatch];
     const result = await db.query(insertSQL, params);
 
     const newId = DB_TYPE === 'sqlite' ? result.lastID : result.rows[0].id;
@@ -249,6 +250,14 @@ router.put('/games/:id', requireJWT, async (req, res) => {
     if (req.body.release_year === undefined) {
       data.release_year = existing.release_year ?? null;
     }
+    // Igual con el vínculo a IGDB: sin igdb_id en el body se conserva el guardado.
+    let igdbMatch = 'selected';
+    if (data.igdb_id === null && req.body.igdb_id === undefined) {
+      data.igdb_id = existing.igdb_id ?? null;
+      igdbMatch = existing.igdb_match ?? null;
+    } else if (data.igdb_id === null) {
+      igdbMatch = null;
+    }
 
     if (data.console_id) {
       const consoleQuery = DB_TYPE === 'sqlite'
@@ -278,10 +287,10 @@ router.put('/games/:id', requireJWT, async (req, res) => {
     }
 
     const updateSQL = DB_TYPE === 'sqlite'
-      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, release_year = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, release_year = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11';
+      ? 'UPDATE games SET title = ?, console_id = ?, year_played = ?, month_played = ?, year_completed = ?, month_completed = ?, hours_played = ?, completed = ?, image = ?, release_year = ?, igdb_id = ?, igdb_match = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      : 'UPDATE games SET title = $1, console_id = $2, year_played = $3, month_played = $4, year_completed = $5, month_completed = $6, hours_played = $7, completed = $8, image = $9, release_year = $10, igdb_id = $11, igdb_match = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13';
 
-    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, id];
+    const params = [data.title, data.console_id, data.year_played, data.month_played, data.year_completed, data.month_completed, data.hours_played, data.completed, data.image, data.release_year, data.igdb_id, igdbMatch, id];
     const result = await db.query(updateSQL, params);
 
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
