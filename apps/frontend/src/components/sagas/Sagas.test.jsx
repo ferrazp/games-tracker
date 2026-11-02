@@ -58,20 +58,23 @@ test('sin sesión no muestra el aviso de juegos sin identificar', async () => {
   expect(screen.queryByText(/sin identificar/)).not.toBeInTheDocument();
 });
 
-test('clic en una tarjeta muestra el detalle y "← Volver" vuelve a la grilla', async () => {
+test('clic en una tarjeta muestra el detalle y "← <nombre>" vuelve a la grilla', async () => {
   mockSagas({
     configured: true,
     unresolved_count: 0,
     sagas: [saga(7, 'Zelda', { completed: 1, pending: 0, missing: 0, total: 1 })],
   });
+  const list = global.fetch;
+  global.fetch = vi.fn((url, options) => (url.endsWith('/sagas/7')
+    ? Promise.resolve({ ok: true, status: 200, json: async () => ({ id: 7, name: 'Zelda', counts: { completed: 1, pending: 0, missing: 0, total: 1 }, groups: [] }) })
+    : list(url, options)));
   const user = userEvent.setup();
   render(<Sagas getHeaders={getHeaders} isAuthenticated />);
 
   await user.click(await screen.findByText('Zelda'));
-  expect(screen.getByRole('button', { name: '← Volver' })).toBeInTheDocument();
-  expect(screen.queryByText('1 completado · 0 pendientes · te faltan 0 de 1')).not.toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: '← Zelda' })).toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: '← Volver' }));
+  await user.click(screen.getByRole('button', { name: '← Zelda' }));
   expect(await screen.findByText('1 completado · 0 pendientes · te faltan 0 de 1')).toBeInTheDocument();
 });
 
