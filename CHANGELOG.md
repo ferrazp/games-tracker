@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.7.0](https://github.com/ferrazp/games-tracker/compare/v1.6.1...v1.7.0) (2026-11-02)
+
+
+### Funcionalidades
+
+* **frontend:** completed date picker opens one month after the start date ([#31](https://github.com/ferrazp/games-tracker/issues/31)) ([f87d168](https://github.com/ferrazp/games-tracker/commit/f87d168314a3cc2a6f4815f1b12b1b0b92b20ce1))
+
+
+### Correcciones
+
+* **backend:** export and import all game fields and the wishlist ([9e6c610](https://github.com/ferrazp/games-tracker/commit/9e6c6101779e726dab1df34b44b6701776530621))
+* **backend:** trust the nginx proxy to read the client IP ([9e6c610](https://github.com/ferrazp/games-tracker/commit/9e6c6101779e726dab1df34b44b6701776530621))
+* **deploy:** accept quoted values in deploy env files ([9e6c610](https://github.com/ferrazp/games-tracker/commit/9e6c6101779e726dab1df34b44b6701776530621))
+* **frontend:** expired session returns to login instead of showing alerts ([9e6c610](https://github.com/ferrazp/games-tracker/commit/9e6c6101779e726dab1df34b44b6701776530621))
+* **frontend:** list search waits until you stop typing ([9e6c610](https://github.com/ferrazp/games-tracker/commit/9e6c6101779e726dab1df34b44b6701776530621))
+
 ## [1.6.1](https://github.com/ferrazp/games-tracker/compare/v1.6.0...v1.6.1) (2026-11-02)
 
 
