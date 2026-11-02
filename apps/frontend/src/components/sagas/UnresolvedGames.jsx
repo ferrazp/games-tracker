@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../../config';
 import { apiFetch, isSessionExpired } from '../../api';
 
@@ -11,7 +11,8 @@ const candidateLabel = (c) => {
 function UnresolvedGames({ getHeaders, onDone }) {
   const [games, setGames] = useState(null);
   const [loadError, setLoadError] = useState(null);
-  const [savingId, setSavingId] = useState(null);
+  const [saving, setSaving] = useState({});
+  const resolvedAny = useRef(false);
   const [rowErrors, setRowErrors] = useState({});
 
   useEffect(() => {
@@ -21,7 +22,7 @@ function UnresolvedGames({ getHeaders, onDone }) {
         const response = await apiFetch(`${API_URL}/sagas/unresolved`, { headers: getHeaders() });
         if (!response.ok) throw new Error('Error al cargar los juegos sin identificar');
         const json = await response.json();
-        if (active) setGames(json);
+        if (active) setGames(Array.isArray(json) ? json : []);
       } catch (err) {
         if (isSessionExpired(err) || !active) return;
         setLoadError(err.message);
@@ -30,8 +31,13 @@ function UnresolvedGames({ getHeaders, onDone }) {
     return () => { active = false; };
   }, [getHeaders]);
 
+  // Cuando se resolvió al menos uno y la lista queda vacía, se termina la revisión.
+  useEffect(() => {
+    if (resolvedAny.current && games && games.length === 0) onDone();
+  }, [games]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const resolve = async (game, igdbId) => {
-    setSavingId(game.id);
+    setSaving((prev) => ({ ...prev, [game.id]: true }));
     setRowErrors((prev) => ({ ...prev, [game.id]: null }));
     try {
       const response = await apiFetch(`${API_URL}/games/${game.id}/igdb`, {
@@ -43,14 +49,13 @@ function UnresolvedGames({ getHeaders, onDone }) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || 'No se pudo guardar');
       }
-      const remaining = games.filter((g) => g.id !== game.id);
-      setGames(remaining);
-      if (remaining.length === 0) onDone();
+      resolvedAny.current = true;
+      setGames((prev) => prev.filter((g) => g.id !== game.id));
     } catch (err) {
       if (isSessionExpired(err)) return;
       setRowErrors((prev) => ({ ...prev, [game.id]: err.message }));
     } finally {
-      setSavingId(null);
+      setSaving((prev) => ({ ...prev, [game.id]: false }));
     }
   };
 
@@ -65,7 +70,7 @@ function UnresolvedGames({ getHeaders, onDone }) {
       )}
 
       {games && games.map((game) => {
-        const busy = savingId === game.id;
+        const busy = Boolean(saving[game.id]);
         return (
           <div key={game.id} className="saga-unresolved-game">
             <h3>{game.title}</h3>

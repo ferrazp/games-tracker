@@ -144,3 +144,49 @@ test('un 401 al elegir avisa a la app y no muestra alert()', async () => {
   expect(alertSpy).not.toHaveBeenCalled();
   expect(screen.queryByText('Invalid or expired token')).not.toBeInTheDocument();
 });
+
+test('PUTs concurrentes que terminan en orden inverso: ambos salen, onDone una vez y A sigue deshabilitado', async () => {
+  const releases = {};
+  global.fetch = vi.fn((url, options = {}) => (options.method === 'PUT'
+    ? new Promise((r) => { releases[url.match(/games\/(\d+)/)[1]] = () => r(res(200, { ok: true })); })
+    : Promise.resolve(res(200, [game(1, 'Alfa', []), game(2, 'Beta', [])]))));
+  const onDone = vi.fn();
+  const user = userEvent.setup();
+  render(<UnresolvedGames getHeaders={getHeaders} onDone={onDone} />);
+
+  const noSaga = await screen.findAllByRole('button', { name: 'No es de ninguna saga' });
+  await user.click(noSaga[0]);
+  await user.click(noSaga[1]);
+  await vi.waitFor(() => expect(Object.keys(releases)).toHaveLength(2));
+
+  releases[2]();
+  await vi.waitFor(() => expect(screen.queryByText('Beta', { selector: 'h3' })).not.toBeInTheDocument());
+  expect(screen.getByText('Alfa', { selector: 'h3' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'No es de ninguna saga' })).toBeDisabled();
+  expect(onDone).not.toHaveBeenCalled();
+
+  releases[1]();
+  await vi.waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText('Alfa', { selector: 'h3' })).not.toBeInTheDocument();
+});
+
+test('elegir un candidato del segundo juego manda el PUT a ese juego con ese igdb_id', async () => {
+  mockApi([
+    game(1, 'Alfa', [cand(11, 'Alfa Uno', 2000, ['PS2'])]),
+    game(2, 'Beta', [cand(22, 'Beta Dos', 2010, ['PS3'])]),
+  ]);
+  const user = userEvent.setup();
+  render(<UnresolvedGames getHeaders={getHeaders} onDone={() => {}} />);
+
+  await user.click(await screen.findByRole('button', { name: /Beta Dos/ }));
+
+  const [url, options] = puts()[0];
+  expect(url).toMatch(/\/games\/2\/igdb$/);
+  expect(JSON.parse(options.body)).toEqual({ igdb_id: 22 });
+});
+
+test('si el GET no devuelve un array se trata como lista vacía', async () => {
+  mockApi({ error: 'algo' });
+  render(<UnresolvedGames getHeaders={getHeaders} onDone={() => {}} />);
+  expect(await screen.findByText('No hay juegos sin identificar.')).toBeInTheDocument();
+});
