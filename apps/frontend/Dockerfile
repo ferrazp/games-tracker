@@ -20,7 +20,7 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build -w games-tracker
 
-FROM nginx:1.28-alpine AS runner
+FROM nginx:1.31-alpine AS runner
 
 ARG APP_VERSION=dev
 LABEL org.opencontainers.image.source="https://github.com/ferrazp/games-tracker" \
