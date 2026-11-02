@@ -4,7 +4,7 @@ import logger from '../../db/logger.js';
 import { config } from '../config.js';
 import { requireJWT } from '../middleware/auth.js';
 import { createIgdbClient } from '../services/igdb-client.js';
-import { syncSagas, getStatusByCanonical } from '../services/sagas-sync.js';
+import { syncSagas, getStatusByCanonical, sql } from '../services/sagas-sync.js';
 import { buildSagaDetail, suggestedVersion, searchLinks, releaseYear } from '../services/sagas-logic.js';
 
 const router = Router();
@@ -17,13 +17,6 @@ let igdbClient = null;
 export function getIgdbClient() {
   if (!igdbClient) igdbClient = createIgdbClient();
   return igdbClient;
-}
-
-// Las consultas se escriben con `?`; en Postgres se numeran como $1, $2…
-function q(text) {
-  if (DB_TYPE === 'sqlite') return text;
-  let i = 0;
-  return text.replace(/\?/g, () => `$${++i}`);
 }
 
 function parseId(raw) {
@@ -53,14 +46,14 @@ async function registeredByCanonical(db) {
 
 async function loadSagaGames(db, sagaId) {
   const { rows } = await db.query(
-    q('SELECT igdb_id, name, release_year, cover_url FROM saga_games WHERE saga_id = ?'),
+    sql(db, 'SELECT igdb_id, name, release_year, cover_url FROM saga_games WHERE saga_id = ? ORDER BY release_year ASC, igdb_id ASC'),
     [sagaId]
   );
   return rows.map((r) => ({ ...r, igdb_id: Number(r.igdb_id) }));
 }
 
 async function sagaDetail(db, sagaId) {
-  const { rows } = await db.query(q('SELECT id, name FROM sagas WHERE id = ?'), [sagaId]);
+  const { rows } = await db.query(sql(db, 'SELECT id, name FROM sagas WHERE id = ?'), [sagaId]);
   if (rows.length === 0) return null;
   const registered = await registeredByCanonical(db);
   if (!registered.some((r) => r.sagaId === sagaId)) return null;
@@ -139,7 +132,7 @@ router.get('/sagas/games/:igdbId/suggest', async (req, res) => {
     if (!igdbId) return res.status(404).json({ error: 'Juego no encontrado' });
     const db = getDatabase();
     const { rows } = await db.query(
-      q('SELECT igdb_id, name, release_year, versions FROM saga_games WHERE igdb_id = ?'),
+      sql(db, 'SELECT igdb_id, name, release_year, versions FROM saga_games WHERE igdb_id = ?'),
       [igdbId]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Juego no encontrado' });
@@ -148,7 +141,7 @@ router.get('/sagas/games/:igdbId/suggest', async (req, res) => {
     const versions = parseJson(game.versions, []);
     const seen = new Set(versions.map((v) => v.label));
     const { rows: catalog } = await db.query(
-      q('SELECT console_name, release_date FROM game_catalog WHERE LOWER(title) = LOWER(?) ORDER BY id ASC'),
+      sql(db, 'SELECT console_name, release_date FROM game_catalog WHERE LOWER(title) = LOWER(?) ORDER BY id ASC'),
       [game.name]
     );
     for (const c of catalog) {
@@ -192,6 +185,13 @@ router.post('/sagas/:id/refresh', requireJWT, async (req, res) => {
   }
   const db = getDatabase();
   try {
+    const { rows } = await db.query(sql(db, 'SELECT id FROM sagas WHERE id = ?'), [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Saga no encontrada' });
+  } catch (error) {
+    logger.error({ err: error }, 'Error fetching saga');
+    return res.status(500).json({ error: 'Error fetching saga' });
+  }
+  try {
     await syncSagas(db, getIgdbClient(), { onlySagaId: id });
   } catch (error) {
     logger.error({ err: error, sagaId: id }, 'Error refreshing saga from IGDB');
@@ -219,8 +219,8 @@ router.put('/games/:id/igdb', requireJWT, async (req, res) => {
 
     const db = getDatabase();
     const result = isNull
-      ? await db.query(q("UPDATE games SET igdb_id = NULL, igdb_match = 'none', igdb_candidates = NULL WHERE id = ?"), [id])
-      : await db.query(q("UPDATE games SET igdb_id = ?, igdb_match = 'manual', igdb_candidates = NULL WHERE id = ?"), [igdbId, id]);
+      ? await db.query(sql(db, "UPDATE games SET igdb_id = NULL, igdb_match = 'none', igdb_candidates = NULL WHERE id = ?"), [id])
+      : await db.query(sql(db, "UPDATE games SET igdb_id = ?, igdb_match = 'manual', igdb_candidates = NULL WHERE id = ?"), [igdbId, id]);
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
     if (!affected) return res.status(404).json({ error: 'Game not found' });
 

@@ -1,9 +1,8 @@
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { getApp, getAuth, getTestConsoleId } from '../helpers/setup.js';
 import { getDatabase } from '../../../db/database.js';
-import { config } from '../../../src/config.js';
 
 const db = () => getDatabase();
 
@@ -33,12 +32,7 @@ let pendingGameId;
 let unresolvedGameId;
 
 describe('API de sagas', () => {
-  // Un .env local puede traer credenciales de Twitch: estos tests no deben tocar IGDB.
-  const hadCredentials = config.twitch.hasCredentials;
-  after(() => { config.twitch.hasCredentials = hadCredentials; });
-
   before(async () => {
-    config.twitch.hasCredentials = false;
     await db().query("INSERT INTO sagas (id, name, refreshed_at) VALUES (39, 'Final Fantasy', NULL)");
     await db().query("INSERT INTO sagas (id, name, refreshed_at) VALUES (50, 'Tales of', NULL)");
     await db().query("INSERT INTO sagas (id, name, refreshed_at) VALUES (77, 'Sin registrados', NULL)");
@@ -55,6 +49,9 @@ describe('API de sagas', () => {
     await resolve(421, 421, 39);
     await resolve(422, 422, 39);
     await resolve(600, 600, 50);
+    // Port del mismo juego canónico (otra versión, otro id de IGDB): no debe contarse dos veces.
+    await insertGame('Symphonia (port)', { igdbId: 601, match: 'selected', completed: 0 });
+    await resolve(601, 600, 50);
 
     unresolvedGameId = await insertGame('Juego raro', {
       match: 'unresolved',
@@ -77,6 +74,15 @@ describe('API de sagas', () => {
     assert.deepEqual(res.body.sagas[1].counts, { completed: 1, pending: 0, missing: 0, total: 1 });
     assert.deepEqual(res.body.sagas[0].covers.sort(), ['https://img/ix.jpg', 'https://img/x.jpg']);
     assert.deepEqual(res.body.sagas[1].covers, ['https://img/sym.jpg']);
+  });
+
+  it('dos juegos registrados con el mismo canónico se cuentan una vez y sus covers no se repiten', async () => {
+    const list = await request(getApp()).get('/sagas');
+    const tales = list.body.sagas.find((s) => s.id === 50);
+    assert.deepEqual(tales.counts, { completed: 1, pending: 0, missing: 0, total: 1 });
+    assert.deepEqual(tales.covers, ['https://img/sym.jpg']);
+    const detail = await request(getApp()).get('/sagas/50');
+    assert.deepEqual(detail.body.counts, { completed: 1, pending: 0, missing: 0, total: 1 });
   });
 
   it('GET /sagas/39 agrupa por año e indica el juego faltante', async () => {
@@ -123,6 +129,19 @@ describe('API de sagas', () => {
     const sinCreds = await request(getApp()).post('/sagas/39/refresh').set('Authorization', getAuth());
     assert.equal(sinCreds.status, 503);
     assert.deepEqual(sinCreds.body, { error: 'Falta configurar las credenciales de IGDB' });
+  });
+
+  it('POST /sagas/:id/refresh responde 404 si la saga no existe', async () => {
+    const { config } = await import('../../../src/config.js');
+    const before = config.twitch.hasCredentials;
+    config.twitch.hasCredentials = true;
+    try {
+      const res = await request(getApp()).post('/sagas/424242/refresh').set('Authorization', getAuth());
+      assert.equal(res.status, 404);
+      assert.deepEqual(res.body, { error: 'Saga no encontrada' });
+    } finally {
+      config.twitch.hasCredentials = before;
+    }
   });
 
   it('GET /sagas/unresolved exige JWT y devuelve los candidatos parseados', async () => {

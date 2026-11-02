@@ -19,7 +19,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const isSqlite = (db) => db instanceof SQLiteClient;
 
 // Las consultas se escriben con `?`; en Postgres se numeran como $1, $2…
-function sql(db, text) {
+export function sql(db, text) {
   if (isSqlite(db)) return text;
   let i = 0;
   return text.replace(/\?/g, () => `$${++i}`);
