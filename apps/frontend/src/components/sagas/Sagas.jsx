@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API_URL from '../../config';
 import { apiFetch, isSessionExpired } from '../../api';
 import { countsLabel, unresolvedLabel } from './sagasText';
@@ -42,18 +42,24 @@ function Sagas({ getHeaders, isAuthenticated }) {
   const [selectedId, setSelectedId] = useState(null);
   const [reviewing, setReviewing] = useState(false);
 
+  const latestLoad = useRef(0);
+
+  // Solo la última carga puede escribir el estado; las respuestas viejas se descartan.
+  // Si un refresco falla, se muestra el error y se conserva la grilla anterior.
   const load = useCallback(async () => {
+    const id = ++latestLoad.current;
     try {
       setError(null);
       setLoading(true);
       const response = await apiFetch(`${API_URL}/sagas`, { headers: getHeaders() });
       if (!response.ok) throw new Error('Error al cargar sagas');
-      setData(await response.json());
+      const json = await response.json();
+      if (id === latestLoad.current) setData(json);
     } catch (err) {
-      if (isSessionExpired(err)) return;
+      if (isSessionExpired(err) || id !== latestLoad.current) return;
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (id === latestLoad.current) setLoading(false);
     }
   }, [getHeaders]);
 

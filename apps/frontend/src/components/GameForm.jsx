@@ -114,7 +114,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
 
   const handleTitleChange = (e) => {
     const value = e.target.value;
-    setGame(prev => ({ ...prev, title: value }));
+    setGame(prev => ({ ...prev, title: value, igdbId: null }));
     if (titleLocked) setTitleLocked(false);
 
     if (value.length > 0) {

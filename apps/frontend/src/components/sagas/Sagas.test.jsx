@@ -84,3 +84,20 @@ test('el aviso abre la revisión de juegos sin identificar y "Volver" regresa', 
   await user.click(screen.getByRole('button', { name: 'Volver' }));
   expect(await screen.findByRole('button', { name: '1 juego sin identificar — revisar' })).toBeInTheDocument();
 });
+
+test('una respuesta vieja que llega tarde no pisa a la más reciente', async () => {
+  const body = (name) => ({ configured: true, unresolved_count: 0, sagas: [saga(1, name, { completed: 1, pending: 0, missing: 0, total: 1 })] });
+  let resolveOld;
+  global.fetch = vi.fn()
+    .mockReturnValueOnce(new Promise((r) => { resolveOld = r; }))
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => body('Nueva') });
+
+  const { rerender } = render(<Sagas getHeaders={() => ({})} isAuthenticated />);
+  rerender(<Sagas getHeaders={() => ({})} isAuthenticated />); // getHeaders nuevo => segunda carga
+  expect(await screen.findByText('Nueva')).toBeInTheDocument();
+
+  resolveOld({ ok: true, status: 200, json: async () => body('Vieja') });
+  await new Promise((r) => setTimeout(r, 20));
+  expect(screen.getByText('Nueva')).toBeInTheDocument();
+  expect(screen.queryByText('Vieja')).not.toBeInTheDocument();
+});
