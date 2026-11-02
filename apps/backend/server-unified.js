@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { initializeDatabase, closeDatabase, DB_TYPE } from './db/database.js';
+import { initializeDatabase, closeDatabase, getDatabase, DB_TYPE } from './db/database.js';
 import logger from './db/logger.js';
 import { config, validateAuthConfig } from './src/config.js';
 import { errorHandler, notFound } from './src/middleware/error-handler.js';
@@ -12,6 +12,8 @@ import searchRouter from './src/routes/search.js';
 import statsRouter from './src/routes/stats.js';
 import coversRouter from './src/routes/covers.js';
 import wishlistRouter from './src/routes/wishlist.js';
+import sagasRouter, { getIgdbClient } from './src/routes/sagas.js';
+import { runSagaJobs } from './src/services/sagas-sync.js';
 
 const app = express();
 const port = config.server.port;
@@ -36,9 +38,18 @@ app.use(searchRouter);
 app.use(statsRouter);
 app.use(coversRouter);
 app.use(wishlistRouter);
+app.use(sagasRouter);
 
 app.use(errorHandler);
 app.use(notFound);
+
+// Resolución de sagas contra IGDB: una vez al arrancar y luego cada 24 h.
+function scheduleSagaJobs() {
+  if (!config.twitch.hasCredentials || process.env.NODE_ENV === 'test') return;
+  const run = () => runSagaJobs(getDatabase(), getIgdbClient(), logger);
+  setTimeout(run, 10_000);
+  setInterval(run, 24 * 60 * 60 * 1000).unref();
+}
 
 async function startServer() {
   const authErrors = validateAuthConfig();
@@ -52,6 +63,7 @@ async function startServer() {
       logger.info({ port, dbType: DB_TYPE.toUpperCase() }, 'Server started');
       if (config.auth.apiKey) logger.info('API key auth enabled');
     });
+    scheduleSagaJobs();
   } catch (error) {
     logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
