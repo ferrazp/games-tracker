@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import GameForm from './GameForm';
+import GameForm, { completedOpenDate } from './GameForm';
 
 const mockGetHeaders = vi.fn(() => ({ 'Content-Type': 'application/json' }));
 const mockConsoles = [
@@ -195,4 +195,37 @@ it('sends auth headers on IGDB online search', async () => {
     expect(call).toBeTruthy();
     expect(call[1].headers.Authorization).toBe('Bearer tok');
   });
+});
+
+async function openCompletedPickerAfterPlaying(user, playedText) {
+  await completeGameSelection(user, vi.fn());
+  const [playedInput] = screen.getAllByPlaceholderText('Mes y año');
+  await user.type(playedInput, playedText);
+  await user.keyboard('{Escape}');
+  await user.click(screen.getByLabelText('Completado'));
+  const completedInput = screen.getAllByPlaceholderText('Mes y año')[1];
+  await user.click(completedInput);
+  return document.querySelector('.react-datepicker');
+}
+
+it('opens the completed date picker one month after the start date', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const picker = await openCompletedPickerAfterPlaying(user, '03/2005');
+
+  expect(picker.querySelector('.year-select').value).toBe('2005');
+  expect(picker.querySelector('.react-datepicker__month-text--keyboard-selected').textContent).toMatch(/abr/i);
+});
+
+it('opens the completed date picker in the next year when the start is December', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const picker = await openCompletedPickerAfterPlaying(user, '12/2005');
+
+  expect(picker.querySelector('.year-select').value).toBe('2006');
+  expect(picker.querySelector('.react-datepicker__month-text--keyboard-selected').textContent).toMatch(/ene/i);
+});
+
+it('does not open the completed date picker in the future', () => {
+  const today = new Date(2026, 10, 2);
+  expect(completedOpenDate(new Date(2026, 10, 1), today)).toEqual(today);
+  expect(completedOpenDate(null, today)).toBeUndefined();
 });

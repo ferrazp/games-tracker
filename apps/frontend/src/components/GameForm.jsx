@@ -6,6 +6,14 @@ import API_URL from '../config';
 import { apiFetch, isSessionExpired } from '../api';
 import ConsoleImage from './ConsoleImage';
 
+// El selector de "Fecha completado" abre un mes después de "Empecé a jugar"
+// (sin pasar de hoy), para no tener que retroceder años al cargar juegos viejos.
+export function completedOpenDate(playedAt, today = new Date()) {
+  if (!playedAt) return undefined;
+  const next = new Date(playedAt.getFullYear(), playedAt.getMonth() + 1, 1);
+  return next > today ? today : next;
+}
+
 function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
   const searchTimeout = useRef(null);
   const fileInputRef = useRef(null);
@@ -539,8 +547,10 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
               onChange={(date) => setGame(prev => ({ ...prev, completedAt: date }))}
               showMonthYearPicker
               renderCustomHeader={renderYearHeader}
+              locale={es}
               dateFormat="MM/yyyy"
               placeholderText="Mes y año"
+              openToDate={completedOpenDate(game.playedAt)}
               minDate={game.playedAt || undefined}
               maxDate={new Date(CURRENT_YEAR, 11, 31)}
             />
