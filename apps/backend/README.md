@@ -4,29 +4,31 @@ API REST para tracking personal de videojuegos. Permite gestionar una colección
 
 ## Stack
 
-- **Runtime:** Node.js 20
+- **Runtime:** Node.js 24
 - **Framework:** Express
-- **Base de datos:** PostgreSQL 17 (Docker) / SQLite (desarrollo local)
+- **Base de datos:** PostgreSQL 17 (QA/Prod en Docker) / SQLite (desarrollo local)
 - **Catálogo:** IGDB API (Twitch) — +7800 juegos precargados
 - **Autenticación:** JWT (admin local)
-- **Deploy:** Docker Compose (3 perfiles: local, dev Docker, prod Docker)
+- **Deploy:** imágenes en GHCR y Docker Compose, con QA y Prod aislados (ver `docs/OPERACION.md` en la raíz)
 
-## Perfiles de Entorno
+## Ambientes
 
-| Perfil | Comando | API | Frontend | DB |
-|--------|---------|-----|----------|----|
-| **Local** (SQLite) | `npm start` | `:4000` | `:3000` | `games.db` |
-| **Dev Docker** | `docker compose -f docker-compose.dev.yml up -d` | `:4001` | `:3001` | PostgreSQL `games_tracker` (puerto `5433`) |
-| **Prod Docker** | `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d` | `:4001` | `:9090` | PostgreSQL `games_tracker_prod` (puerto `5432`) |
+| Ambiente | Cómo se levanta (desde la raíz del monorepo) | Front | API | BD |
+|---|---|---|---|---|
+| **Dev** | `npm run dev` | `:3000` | `:4000` | SQLite `apps/backend/games.db` |
+| **QA** | `npm run qa:up` | `:8081` | `/api` | Postgres propio (`gt-qa`) |
+| **Prod** | `npm run prod:deploy -- X.Y.Z` | `:8080` | `/api` | Postgres propio (`gt-prod`) |
 
-## Quick Start
+## Quick Start (dev)
 
 ```bash
-cp .env.example .env
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-curl http://localhost:4001/health
-curl http://localhost:9090
+cp apps/backend/.env.example apps/backend/.env
+npm install
+npm run dev
+curl http://localhost:4000/health
 ```
+
+QA, Prod, backups y rollback: [`docs/OPERACION.md`](../../docs/OPERACION.md).
 
 ## API
 

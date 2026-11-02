@@ -128,12 +128,19 @@ describe('Error Handling', () => {
   });
 
   it('POST /search/online returns 500 when database throws', async () => {
-    await withBrokenDb(async () => {
-      const res = await request(getApp())
-        .post('/search/online').set('Authorization', getAuth())
-        .send({ query: 'test', console_id: 1 });
-      assert.equal(res.status, 500);
-    });
+    // No depender del .env local: sin credenciales la ruta corta antes con 400.
+    const orig = config.twitch.hasCredentials;
+    config.twitch.hasCredentials = true;
+    try {
+      await withBrokenDb(async () => {
+        const res = await request(getApp())
+          .post('/search/online').set('Authorization', getAuth())
+          .send({ query: 'test', console_id: 1 });
+        assert.equal(res.status, 500);
+      });
+    } finally {
+      config.twitch.hasCredentials = orig;
+    }
   });
 
   it('POST /import returns 500 when outer catch triggered', async () => {

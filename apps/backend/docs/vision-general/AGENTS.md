@@ -1,3 +1,5 @@
+> ⚠️ **Obsoleto desde v1.5.0.** Los `docker-compose*.yml` y `nginx.prod.conf` de este backend se eliminaron. QA y Prod se levantan con `deploy/compose.yaml` y los scripts del monorepo: ver [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
+
 ## 🎯 Visión General
 
 Este es el **backend** del proyecto Games Tracker, un gestor personal de videojuegos jugados. Soporta **3 perfiles de entorno**:

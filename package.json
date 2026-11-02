@@ -12,13 +12,26 @@
   "scripts": {
     "test": "npm test --workspaces && node --test \"deploy/scripts/test/*.test.mjs\"",
     "build": "npm run build -w games-tracker",
-    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w games-backend\" \"npm start -w games-tracker\""
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w games-backend\" \"npm start -w games-tracker\"",
+    "prepare": "husky",
+    "qa:up": "node deploy/scripts/qa.mjs up",
+    "qa:down": "node deploy/scripts/qa.mjs down",
+    "qa:reset": "node deploy/scripts/qa.mjs reset",
+    "prod:deploy": "node deploy/scripts/prod.mjs deploy",
+    "prod:backup": "node deploy/scripts/prod.mjs backup",
+    "prod:restore": "node deploy/scripts/prod.mjs restore",
+    "prod:rollback": "node deploy/scripts/prod.mjs rollback",
+    "prod:status": "node deploy/scripts/prod.mjs status"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "concurrently": "^10.0.6",
+    "husky": "^9.1.7"
   },
   "allowScripts": {
     "esbuild": true,
     "sqlite3": true
-  }
+  },
+  "type": "module"
 }

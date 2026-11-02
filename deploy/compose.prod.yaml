@@ -1,0 +1,6 @@
+# Prod: Postgres NO publicado. El volumen es external: lo crea prod:deploy una
+# sola vez y ningún "docker compose down -v" puede borrarlo.
+volumes:
+  db_data:
+    name: ${DB_VOLUME:?falta DB_VOLUME}
+    external: true

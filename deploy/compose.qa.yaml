@@ -1,0 +1,6 @@
+# QA: Postgres publicado solo en localhost para inspeccionar; volumen normal
+# (se borra con npm run qa:reset).
+services:
+  db:
+    ports:
+      - "127.0.0.1:5434:5432"
