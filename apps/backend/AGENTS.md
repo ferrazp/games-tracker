@@ -44,32 +44,19 @@ See: [🎯 Próximos Pasos Recomendados](./docs/proximos-pasos/AGENTS.md)
 
 See: [🔄 Migration Plan BD](./docs/migration-plan/AGENTS.md)
 
-See: [🐳 Manual Docker](./docs/DOCKER.md)
+See: [🚢 Operación QA / Prod](../../docs/OPERACION.md)
 
 ---
 
 ## 🖥️ Frontend
 
-El frontend (React) está en un proyecto separado:
-
-```
-F:\projects\developments\games-tracker
-```
-
-See su [📖 AGENTS.md](../games-tracker/AGENTS.md) para detalles.
-
-**Ruta relativa desde este repo:** `..\games-tracker`
-**Docker:** Se construye desde `docker-compose.yml` usando `context: ../games-tracker`
+El frontend está en el mismo monorepo: [`apps/frontend`](../frontend/AGENTS.md). Índice general: [AGENTS.md raíz](../../AGENTS.md).
 
 ---
 
-**Última actualización**: 2026-06-14
-**Versión del Schema**: 1.1
-**Estado**: ✅ Docker Production Ready
-**Arquitectura Docker**: Postgres 17 + Backend Node + Frontend Nginx (dev y prod separados)
-**Perfiles**: Dev (`:3001`/`:4001`/`:5433`), Prod (`:9090`/`:4001`/`:5432`), Local (SQLite, `:3000`/`:4000`)
-**Modo BD por Defecto**: SQLite (desarrollo local)
-**Alternativa**: PostgreSQL (Docker dev/prod)
-**Package Manager**: npm (instalado) + pnpm (instalado)
-**Git Flow**: Siempre usar `git flow feature start <name>` para nuevas features. Rama develop como base.
-**Manual de Operaciones**: See [🐳 DOCKER.md](./docs/DOCKER.md)
+**Última actualización**: 2026-11-02
+**Monorepo**: `ferrazp/games-tracker` (npm workspaces); este paquete es el workspace `games-backend`
+**Ambientes**: Dev (SQLite, `:4000`), QA (`gt-qa`, `:8081`), Prod (`gt-prod`, `:8080`), API solo vía `/api` en QA/Prod
+**Modo BD por Defecto**: SQLite (desarrollo local); PostgreSQL 17 en QA y Prod
+**Flujo git**: GitHub Flow + Conventional Commits + release-please (ver [CONTRIBUTING.md](../../CONTRIBUTING.md))
+**Operación**: [docs/OPERACION.md](../../docs/OPERACION.md)

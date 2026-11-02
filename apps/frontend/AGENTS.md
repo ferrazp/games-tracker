@@ -2,12 +2,12 @@
 
 ## 📋 Visión General
 
-Frontend del gestor personal de videojuegos. Consume la API del backend en `http://localhost:4000`.
+Frontend del gestor personal de videojuegos. Consume la API del backend: `http://localhost:4000` en dev y `/api` (proxy de nginx) en QA/Prod.
 
 - **Framework:** React 19 + Vite
 - **Puerto:** 3000
-- **Backend:** `F:\projects\developments\games-tracker-backend` (ver AGENTS.md allí)
-- **API URL:** Centralizada en `src/config.js` (variable `VITE_API_URL` o default `http://localhost:4000`)
+- **Backend:** `apps/backend` del mismo monorepo (ver [AGENTS.md](../backend/AGENTS.md))
+- **API URL:** Centralizada en `src/config.js` (variable `VITE_API_URL`, `/api` en la imagen Docker, o default `http://localhost:4000`)
 
 ---
 
@@ -41,15 +41,12 @@ games-tracker/
 ## 🚀 Quick Start
 
 ```powershell
-cd F:\projects\developments\games-tracker
-npm start                       # Inicia Vite dev en http://localhost:3000
-
-# Para lanzar en ventana separada (PowerShell 7):
-Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker-backend" -ArgumentList "-NoExit", "-Command", "npm start"
-Start-Process pwsh -WorkingDirectory "F:\projects\developments\games-tracker" -ArgumentList "-NoExit", "-Command", "npm start"
+cd F:\projects\developments\games-tracker-monorepo
+npm run dev                     # backend :4000 + front :3000 (HMR)
+npm start -w games-tracker      # solo el front
 ```
 
-El backend debe estar corriendo en `http://localhost:4000`.
+El backend debe estar corriendo en `http://localhost:4000` (lo levanta `npm run dev`).
 
 ### Scripts disponibles
 
@@ -153,4 +150,4 @@ npm run test:watch              # Modo watch
 
 ## 🔗 Backend
 
-El backend está en `F:\projects\developments\games-tracker-backend` con su propio `AGENTS.md`.
+El backend está en `apps/backend` con su propio `AGENTS.md`. Flujo de trabajo y releases: [CONTRIBUTING.md](../../CONTRIBUTING.md).
