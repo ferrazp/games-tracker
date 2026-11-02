@@ -14,6 +14,7 @@ import {
   rollbackPlan,
   createLineFilter,
   checkVolumeName,
+  parseEnvFile,
 } from '../lib.mjs';
 
 describe('parseVersion', () => {
@@ -221,5 +222,19 @@ describe('checkVolumeName', () => {
     assert.throws(() => checkVolumeName('qa', 'gt-prod_db_data'), /gt-qa/);
     assert.throws(() => checkVolumeName('prod', 'gt-qa_db_data'), /gt-prod/);
     assert.throws(() => checkVolumeName('qa', undefined), /gt-qa/);
+  });
+});
+
+describe('parseEnvFile', () => {
+  it('lee claves simples e ignora comentarios y líneas vacías', () => {
+    assert.deepEqual(parseEnvFile('# comentario\nA=1\n\nB=dos\r\n'), { A: '1', B: 'dos' });
+  });
+  it('saca comillas dobles y simples, como docker compose', () => {
+    const env = parseEnvFile('BACKUP_DIR="C:\Users\Juan Perez\backups"\nX=\'con espacios\'');
+    assert.equal(env.BACKUP_DIR, 'C:\Users\Juan Perez\backups');
+    assert.equal(env.X, 'con espacios');
+  });
+  it('mantiene el = dentro del valor y no toca comillas internas', () => {
+    assert.deepEqual(parseEnvFile('JWT_SECRET=abc=def\nY=a"b'), { JWT_SECRET: 'abc=def', Y: 'a"b' });
   });
 });
