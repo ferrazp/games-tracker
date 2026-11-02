@@ -1,50 +1,43 @@
-# Dependencies
+# Dependencias
 node_modules/
 
-# Environment
+# Entorno y secretos
 .env
 .env.local
 .env.*.local
+deploy/*.env
+deploy/.prod-version
+deploy/.qa-version
 
-# Database
+# Bases de datos locales
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
 
-# Logs
+# Build y cobertura
+dist/
+build/
+coverage/
+
+# Logs y temporales
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+tmp/
+temp/
+*.tmp
+uploads/
+.docker/
 
-# OS
+# SO / editores
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# IDE / Editor
 .vscode/settings.json
 .vscode/launch.json
 .idea/
 *.swp
-*.swo
 *~
 
-# Docker
-.docker/
-
-# Build output
-dist/
-build/
-
-# Test coverage
-coverage/
-
-# Temp files
-tmp/
-temp/
-*.tmp
-
-# Uploads
-uploads/
+# Espacio de trabajo de agentes
+.superpowers/
