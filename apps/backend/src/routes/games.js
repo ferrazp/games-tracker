@@ -3,6 +3,7 @@ import { getDatabase, DB_TYPE } from '../../db/database.js';
 import logger from '../../db/logger.js';
 import { requireJWT } from '../middleware/auth.js';
 import { validateGameData, parseGameData } from '../validators/game.js';
+import { triggerSagaJobs } from './sagas.js';
 
 const router = Router();
 
@@ -215,6 +216,7 @@ router.post('/games', requireJWT, async (req, res) => {
     const game = await fetchGameById(db, newId);
 
     logger.info({ gameId: newId, title: data.title }, 'Game created');
+    triggerSagaJobs(db);
 
     res.status(201).json({
       message: 'Game added successfully',
@@ -305,6 +307,7 @@ router.put('/games/:id', requireJWT, async (req, res) => {
     const game = await fetchGameById(db, id);
 
     logger.info({ gameId: id }, 'Game updated');
+    triggerSagaJobs(db);
 
     res.json({
       message: 'Game updated successfully',

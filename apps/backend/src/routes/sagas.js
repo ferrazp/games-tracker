@@ -4,7 +4,7 @@ import logger from '../../db/logger.js';
 import { config } from '../config.js';
 import { requireJWT } from '../middleware/auth.js';
 import { createIgdbClient } from '../services/igdb-client.js';
-import { syncSagas, getStatusByCanonical, sql } from '../services/sagas-sync.js';
+import { syncSagas, runSagaJobs, getStatusByCanonical, sql } from '../services/sagas-sync.js';
 import { buildSagaDetail, suggestedVersion, searchLinks, releaseYear } from '../services/sagas-logic.js';
 import { parseIgdbId } from '../validators/game.js';
 
@@ -18,6 +18,13 @@ let igdbClient = null;
 export function getIgdbClient() {
   if (!igdbClient) igdbClient = createIgdbClient();
   return igdbClient;
+}
+
+// Corre los jobs de sagas en segundo plano, sin esperar, para que un juego nuevo o
+// editado aparezca sin esperar al job diario. runSagaJobs nunca corre dos a la vez.
+export function triggerSagaJobs(db) {
+  if (!config.twitch.hasCredentials) return;
+  runSagaJobs(db, getIgdbClient(), logger).catch((err) => logger.error({ err }, 'Background saga jobs failed'));
 }
 
 function parseId(raw) {
@@ -225,9 +232,7 @@ router.put('/games/:id/igdb', requireJWT, async (req, res) => {
     const affected = DB_TYPE === 'sqlite' ? result.changes : result.rowCount;
     if (!affected) return res.status(404).json({ error: 'Game not found' });
 
-    if (config.twitch.hasCredentials) {
-      syncSagas(db, getIgdbClient()).catch((err) => logger.error({ err }, 'Saga sync after manual IGDB link failed'));
-    }
+    triggerSagaJobs(db);
     res.json({ id, igdb_id: isNull ? null : igdbId, igdb_match: isNull ? 'none' : 'manual' });
   } catch (error) {
     logger.error({ err: error }, 'Error linking game to IGDB');
