@@ -6,6 +6,7 @@
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { askWord, compose, counts, die, readEnvFile, restoreFrom } from './common.mjs';
+import { composeArgs } from './lib.mjs';
 
 const ENV = 'qa';
 const { positionals, values } = parseArgs({
@@ -27,7 +28,7 @@ async function up() {
     die(`No se pudieron bajar las imágenes :${tag} (¿existe el tag? ¿docker login ghcr.io?)`);
   }
   if (compose(ENV, ['up', '-d', '--wait', '--wait-timeout', '120'], { env }) !== 0) {
-    die('QA no quedó healthy. Revisá: docker compose -p gt-qa logs');
+    die(`QA no quedó healthy. Logs: docker ${composeArgs(ENV, 'logs').join(' ')}`);
   }
   writeFileSync('deploy/.qa-version', `${tag}\n`);
   console.log(`✔ QA arriba en http://localhost:${cfg.FRONT_PORT} (versión ${tag})`);

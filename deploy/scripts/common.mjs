@@ -1,13 +1,17 @@
 // Helpers con I/O compartidos por qa.mjs y prod.mjs.
 import { spawnSync, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
-import { existsSync, readFileSync, openSync, closeSync, createReadStream, statSync } from 'node:fs';
+import {
+  existsSync, readFileSync, openSync, closeSync, createReadStream, statSync, rmSync,
+} from 'node:fs';
+import { Readable, Writable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
-import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { composeArgs, confirmWord, isOwnerStatement } from './lib.mjs';
+import {
+  checkVolumeName, composeArgs, confirmWord, createLineFilter, isOwnerStatement,
+} from './lib.mjs';
 
 /** Raíz del monorepo: todos los comandos corren desde ahí. */
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -25,6 +29,11 @@ export function readEnvFile(env) {
   for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
     const m = /^([A-Z0-9_]+)=(.*)$/.exec(line);
     if (m) out[m[1]] = m[2];
+  }
+  try {
+    checkVolumeName(env, out.DB_VOLUME);
+  } catch (e) {
+    die(`${file}: ${e.message}`);
   }
   return out;
 }
@@ -59,50 +68,64 @@ export async function askWord(question, expected) {
   return confirmWord(answer, expected);
 }
 
-/** pg_dump del servicio db -> archivo .sql.gz. */
+/**
+ * pg_dump del servicio db -> archivo .sql.gz. Con pipefail, un pg_dump que corta
+ * a mitad hace fallar el backup; el archivo parcial se borra.
+ */
 export function dumpTo(envName, file, extraEnv = {}) {
   const fd = openSync(file, 'w');
+  let status;
   try {
-    const r = spawnSync('docker', composeArgs(envName, 'exec', '-T', 'db', 'sh', '-c',
-      'pg_dump --no-owner --clean --if-exists -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip'), {
+    status = spawnSync('docker', composeArgs(envName, 'exec', '-T', 'db', 'sh', '-c',
+      'set -o pipefail; pg_dump --no-owner --clean --if-exists -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip'), {
       stdio: ['ignore', fd, 'inherit'],
       env: { ...process.env, ...extraEnv },
-    });
-    if (r.status !== 0) die(`pg_dump falló (código ${r.status})`);
+    }).status;
   } finally {
     closeSync(fd);
   }
-  if (statSync(file).size < 100) die(`El backup ${file} quedó vacío`);
+  if (status !== 0 || statSync(file).size < 100) {
+    rmSync(file, { force: true });
+    die(`El backup falló (código ${status}); no se generó ${file}`);
+  }
 }
 
-/** Vacía el esquema public y carga un .sql.gz, salteando las sentencias de dueño. */
-export async function restoreFrom(envName, file, extraEnv = {}) {
-  const reset = compose(envName, ['exec', '-T', 'db', 'sh', '-c',
-    'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'],
-  { env: extraEnv });
-  if (reset !== 0) die('No se pudo vaciar el esquema');
+/** Descomprime el archivo entero sin usarlo, para detectar un gzip truncado ANTES de tocar la base. */
+export async function verifyDump(file) {
+  if (!file || !existsSync(file)) die(`No existe el archivo ${file}`);
+  try {
+    await pipeline(createReadStream(file), createGunzip(), new Writable({ write: (_c, _e, cb) => cb() }));
+  } catch (e) {
+    die(`El archivo ${file} está dañado o no es un .sql.gz válido: ${e.message}`);
+  }
+}
 
+/**
+ * Reemplaza el esquema public por el contenido de un .sql.gz, en UNA transacción:
+ * si algo falla, la base queda como estaba. Saltea las sentencias de dueño.
+ */
+export async function restoreFrom(envName, file, extraEnv = {}) {
+  await verifyDump(file);
   const child = spawn('docker', composeArgs(envName, 'exec', '-T', 'db', 'sh', '-c',
-    'psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null'), {
+    'psql -q -X --single-transaction -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null'), {
     stdio: ['pipe', 'inherit', 'inherit'],
     env: { ...process.env, ...extraEnv },
   });
   const done = new Promise((res) => child.on('close', res));
-
-  let rest = '';
-  const filter = new Transform({
-    transform(chunk, _enc, cb) {
-      const lines = (rest + chunk.toString('utf8')).split('\n');
-      rest = lines.pop();
-      cb(null, lines.filter((l) => !isOwnerStatement(l)).map((l) => `${l}\n`).join(''));
-    },
-    flush(cb) {
-      cb(null, rest && !isOwnerStatement(rest) ? rest : '');
-    },
-  });
-  await pipeline(createReadStream(file), createGunzip(), filter, child.stdin);
+  try {
+    await pipeline(
+      Readable.from([Buffer.from('DROP SCHEMA public CASCADE;\nCREATE SCHEMA public;\n')]),
+      child.stdin,
+      { end: false },
+    );
+    await pipeline(createReadStream(file), createGunzip(), createLineFilter(isOwnerStatement), child.stdin);
+  } catch (e) {
+    child.stdin.destroy();
+    await done;
+    die(`La restauración se cortó (${e.message}); la base quedó como estaba`);
+  }
   const code = await done;
-  if (code !== 0) die(`La restauración falló (código ${code})`);
+  if (code !== 0) die(`La restauración falló (código ${code}); la base quedó como estaba`);
 }
 
 /** Conteos de las tablas principales (para verificar una restauración). */

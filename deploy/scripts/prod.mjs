@@ -8,12 +8,14 @@
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import {
-  backupFileName, checkDeployPreconditions, parseVersion, selectBackupsToDelete,
+  backupFileName, checkDeployPreconditions, composeArgs, formatHistoryEntry, historyState,
+  parseHistory, parseVersion, rollbackPlan, selectBackupsToDelete,
 } from './lib.mjs';
 import {
   askWord, compose, composeOut, counts, die, docker, dockerOut, dumpTo, readEnvFile, restoreFrom,
+  verifyDump,
 } from './common.mjs';
 
 const ENV = 'prod';
@@ -22,17 +24,13 @@ const IMAGES = ['backend', 'frontend'].map((a) => `ghcr.io/ferrazp/games-tracker
 const VERSION_FILE = 'deploy/.prod-version';
 const cfg = readEnvFile(ENV);
 const BACKUP_DIR = resolve(cfg.BACKUP_DIR || join(homedir(), 'games-tracker-backups'));
-const VOLUME = cfg.DB_VOLUME || 'gt-prod_db_data';
+const VOLUME = cfg.DB_VOLUME;
+const LOGS_CMD = `docker ${composeArgs(ENV, 'logs', 'backend').join(' ')}`;
 
-/** Historial de deploys: líneas "<versión> <backup tomado antes de ese deploy | ->". */
-function history() {
-  if (!existsSync(VERSION_FILE)) return [];
-  return readFileSync(VERSION_FILE, 'utf8').split(/\r?\n/).filter(Boolean).map((l) => {
-    const [version, backup] = l.split(' ');
-    return { version, backup: backup && backup !== '-' ? backup : null };
-  });
-}
-const currentVersion = () => history().at(-1)?.version ?? null;
+/** Historial de deploys (ver formato en lib.mjs). */
+const history = () => (existsSync(VERSION_FILE) ? parseHistory(readFileSync(VERSION_FILE, 'utf8')) : []);
+const record = (entry) => appendFileSync(VERSION_FILE, formatHistoryEntry(entry));
+const currentVersion = () => historyState(history()).current;
 const envFor = (version) => ({ IMAGE_TAG: version || 'none' });
 
 function dbRunning() {
@@ -40,14 +38,10 @@ function dbRunning() {
   return r.stdout.split('\n').includes('db');
 }
 
-function hasData(env) {
-  const c = counts(ENV, env);
-  return c !== null && Object.values(c).some((n) => n > 0);
-}
-
-/** Backup con retención. Devuelve la ruta del archivo o null si no hay datos. */
+/** Backup con retención. Devuelve la ruta del archivo, o null solo si la base está vacía con certeza. */
 function backup(version, env) {
-  if (!hasData(env)) {
+  const c = counts(ENV, env);
+  if (c !== null && Object.values(c).every((n) => n === 0)) {
     console.log('ℹ La base de prod está vacía: no hace falta backup.');
     return null;
   }
@@ -55,7 +49,8 @@ function backup(version, env) {
   const file = join(BACKUP_DIR, backupFileName(version || 'unknown'));
   dumpTo(ENV, file, env);
   console.log(`✔ Backup: ${file}`);
-  for (const old of selectBackupsToDelete(readdirSync(BACKUP_DIR), 30)) {
+  const referenced = history().map((e) => e.backup).filter(Boolean).map((b) => basename(b));
+  for (const old of selectBackupsToDelete(readdirSync(BACKUP_DIR), 30, referenced)) {
     rmSync(join(BACKUP_DIR, old));
     console.log(`  (retención) borrado ${old}`);
   }
@@ -70,10 +65,10 @@ function startDb(env) {
   if (compose(ENV, ['up', '-d', '--wait', 'db'], { env }) !== 0) die('Postgres de prod no arrancó');
 }
 
-function upAll(env) {
-  if (compose(ENV, ['up', '-d', '--wait', '--wait-timeout', '90'], { env }) !== 0) {
-    die('Prod no quedó healthy en 90 s. Revisá: docker compose -p gt-prod logs backend');
-  }
+const upAll = (env) => compose(ENV, ['up', '-d', '--wait', '--wait-timeout', '90'], { env }) === 0;
+
+function pull(env) {
+  if (compose(ENV, ['pull', 'backend', 'frontend'], { env }) !== 0) die('No se pudieron bajar las imágenes');
 }
 
 async function deploy(arg) {
@@ -88,18 +83,22 @@ async function deploy(arg) {
   if (pre.needsConfirm && !(await askWord(`⚠ ${pre.reason}. ¿Desplegar igual en PROD?`, 'prod'))) die('Cancelado.');
 
   const env = envFor(version);
+  pull(env);
   startDb(env);
   const backupFile = backup(currentVersion(), env);
-  if (compose(ENV, ['pull', 'backend', 'frontend'], { env }) !== 0) die('No se pudieron bajar las imágenes');
-  upAll(env);
-  appendFileSync(VERSION_FILE, `${version} ${backupFile ?? '-'}\n`);
+  if (!upAll(env)) {
+    record({ version, status: 'failed', backup: backupFile });
+    die(`Prod no quedó healthy en 90 s con v${version}.\n  Logs:   ${LOGS_CMD}\n  Volver: npm run prod:rollback`
+      + (backupFile ? ` (restaura ${backupFile})` : ''));
+  }
+  record({ version, status: 'ok', backup: backupFile });
   console.log(`✔ Prod en v${version}: http://localhost:${cfg.FRONT_PORT}`);
 }
 
 async function restore(file) {
-  if (!file || !existsSync(file)) die('Uso: npm run prod:restore -- <archivo.sql.gz existente>');
   const version = currentVersion();
   if (!version) die('Prod nunca se desplegó: primero npm run prod:deploy -- X.Y.Z');
+  await verifyDump(file);
   if (!(await askWord(`Se van a REEMPLAZAR todos los datos de prod con ${file}.`, 'prod'))) die('Cancelado.');
   const env = envFor(version);
   startDb(env);
@@ -107,41 +106,40 @@ async function restore(file) {
   if (safety) console.log(`ℹ Backup de seguridad previo: ${safety}`);
   compose(ENV, ['stop', 'backend'], { env });
   await restoreFrom(ENV, resolve(file), env);
-  upAll(env);
+  if (!upAll(env)) die(`Prod no quedó healthy después de restaurar. Logs: ${LOGS_CMD}`);
   console.log('✔ Restaurado. Conteos:', counts(ENV, env));
 }
 
 async function rollback() {
-  const h = history();
-  if (h.length < 2) die('No hay una versión anterior registrada en deploy/.prod-version');
-  const last = h.at(-1);
-  const prev = h.at(-2);
-  const msg = `Rollback de prod: v${last.version} → v${prev.version}`
-    + (last.backup ? `, restaurando los datos de antes del deploy (${last.backup}).` : ' (solo imágenes).');
+  const plan = rollbackPlan(history());
+  if (!plan) die('No hay una versión anterior a la que volver (ver deploy/.prod-version)');
+  if (plan.restore) await verifyDump(plan.restore);
+  const msg = `Rollback de prod: v${plan.from}${plan.kind === 'failed' ? ' (deploy fallido)' : ''} → v${plan.to}`
+    + (plan.restore ? `, restaurando los datos de antes de ese deploy (${plan.restore}).` : ' (solo imágenes).');
   if (!(await askWord(msg, 'prod'))) die('Cancelado.');
-  const env = envFor(prev.version);
+  const env = envFor(plan.to);
+  pull(env);
   startDb(env);
-  const safety = backup(last.version, env);
-  if (safety) console.log(`ℹ Backup de seguridad de v${last.version}: ${safety}`);
+  const safety = backup(plan.from, env);
+  if (safety) console.log(`ℹ Backup de seguridad de v${plan.from}: ${safety}`);
   compose(ENV, ['stop', 'backend', 'frontend'], { env });
-  if (last.backup) await restoreFrom(ENV, last.backup, env);
-  if (compose(ENV, ['pull', 'backend', 'frontend'], { env }) !== 0) die('No se pudieron bajar las imágenes');
-  upAll(env);
-  appendFileSync(VERSION_FILE, `${prev.version} -\n`);
-  console.log(`✔ Prod volvió a v${prev.version}`);
+  if (plan.restore) await restoreFrom(ENV, plan.restore, env);
+  if (!upAll(env)) die(`Prod no quedó healthy con v${plan.to}. Logs: ${LOGS_CMD}`);
+  record({ version: plan.to, status: 'rollback', backup: null, note: plan.kind });
+  console.log(`✔ Prod volvió a v${plan.to}`);
 }
 
 async function status() {
-  const version = currentVersion();
-  console.log(`Versión desplegada: ${version ? `v${version}` : '(ninguna)'}`);
-  compose(ENV, ['ps'], { env: envFor(version) });
+  const { current, failed } = historyState(history());
+  console.log(`Versión desplegada: ${current ? `v${current}` : '(ninguna)'}${failed ? ' — ⚠ el último deploy FALLÓ (npm run prod:rollback)' : ''}`);
+  compose(ENV, ['ps'], { env: envFor(current) });
   try {
     const res = await fetch(`http://localhost:${cfg.FRONT_PORT}/api/version`);
     console.log(`API /version: ${res.ok ? JSON.stringify(await res.json()) : res.status}`);
   } catch {
     console.log('API /version: sin respuesta');
   }
-  if (dbRunning()) console.log('Datos:', counts(ENV, envFor(version)));
+  if (dbRunning()) console.log('Datos:', counts(ENV, envFor(current)));
   const files = existsSync(BACKUP_DIR)
     ? readdirSync(BACKUP_DIR).filter((f) => f.startsWith('gt-prod-')).sort()
     : [];

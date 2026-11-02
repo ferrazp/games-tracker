@@ -8,6 +8,12 @@ import {
   composeArgs,
   confirmWord,
   isOwnerStatement,
+  parseHistory,
+  formatHistoryEntry,
+  historyState,
+  rollbackPlan,
+  createLineFilter,
+  checkVolumeName,
 } from '../lib.mjs';
 
 describe('parseVersion', () => {
@@ -119,5 +125,101 @@ describe('isOwnerStatement', () => {
     assert.equal(isOwnerStatement('ALTER TABLE ONLY public.games ADD CONSTRAINT games_pkey PRIMARY KEY (id);'), false);
     assert.equal(isOwnerStatement('1\tALTER TABLE x OWNER TO y;\t2020'), false);
     assert.equal(isOwnerStatement('CREATE TABLE public.games ('), false);
+  });
+});
+
+describe('historial de deploys', () => {
+  const B1 = 'C:\Users\Juan Perez\backups\gt-prod-20260101-000000-v1.5.0.sql.gz';
+  const line = (version, status, backup = null, note = '') => formatHistoryEntry({ version, status, backup, note });
+  const hist = (...lines) => parseHistory(lines.join(''));
+
+  it('ida y vuelta, con rutas con espacios', () => {
+    const [e] = parseHistory(line('1.6.0', 'ok', B1));
+    assert.deepEqual(e, { version: '1.6.0', status: 'ok', backup: B1, note: '' });
+  });
+  it('ignora líneas vacías', () => {
+    assert.equal(parseHistory(`\n${line('1.5.0', 'ok')}\n\n`).length, 1);
+  });
+  it('estado: la versión corriendo es la del deploy fallido si lo hubo', () => {
+    const s = historyState(hist(line('1.5.0', 'ok'), line('1.6.0', 'failed', B1)));
+    assert.equal(s.current, '1.6.0');
+    assert.equal(s.failed.version, '1.6.0');
+    assert.deepEqual(s.stack.map((e) => e.version), ['1.5.0']);
+  });
+
+  describe('rollbackPlan', () => {
+    it('tras un deploy fallido vuelve a la última ok y restaura el backup de ese intento', () => {
+      const p = rollbackPlan(hist(
+        line('1.5.0', 'ok'), line('1.6.0', 'ok', 'B1'), line('1.7.0', 'failed', 'B2'),
+      ));
+      assert.deepEqual(p, { from: '1.7.0', to: '1.6.0', restore: 'B2', kind: 'failed' });
+    });
+    it('tras un deploy ok vuelve a la anterior y restaura el backup previo a ese deploy', () => {
+      const p = rollbackPlan(hist(line('1.5.0', 'ok'), line('1.6.0', 'ok', 'B1')));
+      assert.deepEqual(p, { from: '1.6.0', to: '1.5.0', restore: 'B1', kind: 'ok' });
+    });
+    it('un segundo rollback sigue hacia atrás, no vuelve a la versión rota', () => {
+      const p = rollbackPlan(hist(
+        line('1.4.1', 'ok'), line('1.5.0', 'ok', 'B0'), line('1.6.0', 'ok', 'B1'),
+        line('1.5.0', 'rollback', null, 'ok'),
+      ));
+      assert.deepEqual(p, { from: '1.5.0', to: '1.4.1', restore: 'B0', kind: 'ok' });
+    });
+    it('después de revertir un fallido, el siguiente rollback usa las ok', () => {
+      const p = rollbackPlan(hist(
+        line('1.5.0', 'ok'), line('1.6.0', 'ok', 'B1'), line('1.7.0', 'failed', 'B2'),
+        line('1.6.0', 'rollback', null, 'failed'),
+      ));
+      assert.deepEqual(p, { from: '1.6.0', to: '1.5.0', restore: 'B1', kind: 'ok' });
+    });
+    it('redesplegar la misma versión no cuenta como versión anterior', () => {
+      const p = rollbackPlan(hist(line('1.5.0', 'ok'), line('1.6.0', 'ok', 'B1'), line('1.6.0', 'ok', 'B2')));
+      assert.equal(p.to, '1.5.0');
+    });
+    it('sin versión anterior devuelve null', () => {
+      assert.equal(rollbackPlan(hist(line('1.5.0', 'ok'))), null);
+      assert.equal(rollbackPlan([]), null);
+      assert.equal(rollbackPlan(hist(line('1.5.0', 'failed'))), null);
+    });
+  });
+});
+
+describe('selectBackupsToDelete con protegidos', () => {
+  it('no borra backups referenciados por el historial', () => {
+    const files = Array.from({ length: 3 }, (_, i) => backupFileName('1.5.0', new Date(2026, 0, 1 + i)));
+    assert.deepEqual(selectBackupsToDelete(files, 1, [files[0]]), [files[1]]);
+  });
+});
+
+describe('createLineFilter', () => {
+  const run = async (chunks, predicate) => {
+    const f = createLineFilter(predicate);
+    let out = '';
+    f.on('data', (d) => { out += d; });
+    const end = new Promise((res) => f.on('end', res));
+    for (const c of chunks) f.write(c);
+    f.end();
+    await end;
+    return out;
+  };
+  it('no corrompe caracteres multibyte partidos entre chunks', async () => {
+    const buf = Buffer.from('Pokémon ñandú\nFinal Fantasy\n', 'utf8');
+    const cut = buf.indexOf(Buffer.from('é')) + 1; // parte la é al medio
+    const out = await run([buf.subarray(0, cut), buf.subarray(cut)], () => false);
+    assert.equal(out, 'Pokémon ñandú\nFinal Fantasy\n');
+  });
+  it('saca las líneas que cumplen el predicado, incluida la última sin \n', async () => {
+    const out = await run([Buffer.from('a\nDROP\nb\nDROP')], (l) => l === 'DROP');
+    assert.equal(out, 'a\nb\n');
+  });
+});
+
+describe('checkVolumeName', () => {
+  it('exige el prefijo del ambiente', () => {
+    assert.doesNotThrow(() => checkVolumeName('qa', 'gt-qa_db_data'));
+    assert.doesNotThrow(() => checkVolumeName('prod', 'gt-prod_db_data'));
+    assert.throws(() => checkVolumeName('qa', 'gt-prod_db_data'), /gt-qa/);
+    assert.throws(() => checkVolumeName('prod', 'gt-qa_db_data'), /gt-prod/);
+    assert.throws(() => checkVolumeName('qa', undefined), /gt-qa/);
   });
 });

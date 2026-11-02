@@ -73,10 +73,12 @@ docker build -f apps/frontend/Dockerfile -t ghcr.io/ferrazp/games-tracker-fronte
 
 ### Rollback, paso a paso
 
-`deploy/.prod-version` guarda una línea por deploy: `<versión> <backup tomado antes de ese deploy>`. `prod:rollback`:
-1. hace un backup de seguridad de la versión actual,
-2. restaura el backup tomado antes del último deploy (por si la versión nueva migró datos),
-3. levanta las imágenes de la versión anterior.
+`deploy/.prod-version` guarda una línea por evento (separada por tabs): `<versión> <ok|failed|rollback> <backup tomado antes> <nota>`. Un deploy que no queda healthy se registra como `failed`. `prod:rollback`:
+1. calcula el destino: si el último deploy falló, la última versión `ok`; si no, la `ok` anterior (un segundo rollback sigue hacia atrás),
+2. verifica que el backup a restaurar exista y no esté dañado, y baja las imágenes,
+3. hace un backup de seguridad de la versión actual,
+4. restaura, en una sola transacción, el backup tomado antes de ese deploy (por si la versión nueva migró datos),
+5. levanta las imágenes de la versión destino.
 
 Si solo hay que volver a una versión puntual sin tocar datos: `npm run prod:deploy -- X.Y.Z`.
 
@@ -85,7 +87,8 @@ Si solo hay que volver a una versión puntual sin tocar datos: `npm run prod:dep
 | Síntoma | Causa probable |
 |---|---|
 | `Falta deploy/<amb>.env` | Copiar el `.example` y completarlo |
+| `prod:deploy` falló el healthcheck | Mirar los logs con el comando que imprime y volver con `npm run prod:rollback` (restaura el backup tomado antes de ese deploy) |
 | `No existen las imágenes :X.Y.Z en GHCR` | El workflow *Release* todavía no terminó, o falta `docker login ghcr.io` |
-| El backend se reinicia en loop | `JWT_SECRET` corto o `ADMIN_PASS` débil (en producción se rechazan): `docker compose -p gt-prod logs backend` |
+| El backend se reinicia en loop | `JWT_SECRET` corto o `ADMIN_PASS` débil (en producción se rechazan): `docker compose -p gt-prod --env-file deploy/prod.env -f deploy/compose.yaml -f deploy/compose.prod.yaml logs backend` |
 | `/api/...` devuelve 502 | El backend todavía no está healthy |
 | Ver los datos de QA | Cualquier cliente Postgres en `127.0.0.1:5434`, usuario y clave de `deploy/qa.env` |
