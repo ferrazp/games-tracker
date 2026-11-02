@@ -80,6 +80,38 @@ test('el filtro "Te faltan" deja solo el faltante', async () => {
   expect(screen.queryByText('Tales Dos')).not.toBeInTheDocument();
 });
 
+test('un filtro sin juegos muestra un texto en lugar de la grilla vacía', async () => {
+  const allCompleted = {
+    ...detail,
+    counts: { completed: 1, pending: 0, missing: 0, total: 1 },
+    groups: [{ year: 2020, games: [detail.groups[0].games[0]] }],
+  };
+  const noneCompleted = {
+    ...detail,
+    counts: { completed: 0, pending: 0, missing: 1, total: 1 },
+    groups: [{ year: null, games: [detail.groups[1].games[0]] }],
+  };
+  const user = userEvent.setup();
+
+  mockFetch({ 'GET /sagas/39': { body: allCompleted } });
+  const { unmount } = renderDetail();
+  await screen.findByRole('button', { name: '← Tales' });
+  expect(screen.queryByText('No te falta ninguno.')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Te faltan' }));
+  expect(screen.getByText('No te falta ninguno.')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Pendientes' }));
+  expect(screen.getByText('No tenés ninguno pendiente.')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Completados' }));
+  expect(screen.queryByText('Todavía no completaste ninguno.')).not.toBeInTheDocument();
+  unmount();
+
+  mockFetch({ 'GET /sagas/39': { body: noneCompleted } });
+  renderDetail();
+  await screen.findByRole('button', { name: '← Tales' });
+  await user.click(screen.getByRole('button', { name: 'Completados' }));
+  expect(screen.getByText('Todavía no completaste ninguno.')).toBeInTheDocument();
+});
+
 test('clic en un faltante abre el panel con versiones, sugerida y links', async () => {
   mockFetch({
     'GET /sagas/39': { body: detail },

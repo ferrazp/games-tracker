@@ -6,9 +6,9 @@ import SuggestPanel from './SuggestPanel';
 
 const FILTERS = [
   { key: 'all', label: 'Todos' },
-  { key: 'completed', label: 'Completados' },
-  { key: 'pending', label: 'Pendientes' },
-  { key: 'missing', label: 'Te faltan' },
+  { key: 'completed', label: 'Completados', empty: 'Todavía no completaste ninguno.' },
+  { key: 'pending', label: 'Pendientes', empty: 'No tenés ninguno pendiente.' },
+  { key: 'missing', label: 'Te faltan', empty: 'No te falta ninguno.' },
 ];
 
 const BADGES = { completed: '✓', pending: '…' };
@@ -102,6 +102,7 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
   const groups = detail.groups
     .map((g) => ({ ...g, games: g.games.filter((game) => filter === 'all' || game.status === filter) }))
     .filter((g) => g.games.length > 0);
+  const emptyText = groups.length === 0 ? FILTERS.find((f) => f.key === filter)?.empty : null;
 
   return (
     <div className="saga-detail">
@@ -124,6 +125,8 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
           </button>
         ))}
       </div>
+
+      {emptyText && <p className="status-message empty">{emptyText}</p>}
 
       {groups.map((g) => (
         <section key={g.year ?? 'sin-fecha'} className="saga-year-group">
