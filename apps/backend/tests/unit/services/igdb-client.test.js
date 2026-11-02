@@ -73,7 +73,9 @@ describe('igdb-client', () => {
     assert.match(calls[0].init.body, /^search "Tales of"; fields /);
     assert.ok(!calls[0].init.body.includes('where'));
     assert.match(calls[0].init.body, /limit 10;$/);
+    await client.search('Back\\slash "x\\"', []);
+    assert.match(calls[1].init.body, /^search "Back\\\\slash x\\\\"; fields /);
     await client.search('Zelda', [130, 6]);
-    assert.match(calls[1].init.body, /where platforms = \(130,6\); limit 10;$/);
+    assert.match(calls[2].init.body, /where platforms = \(130,6\); limit 10;$/);
   });
 });

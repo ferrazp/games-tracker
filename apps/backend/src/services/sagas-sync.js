@@ -1,6 +1,7 @@
 // Completa los IDs de IGDB de los juegos registrados, los resuelve a su juego
 // canónico y a su saga, y cachea en la base las sagas con sus juegos.
 import { SQLiteClient } from '../../db/database.js';
+import appLogger from '../../db/logger.js';
 import { IGDB_PLATFORM_TO_CONSOLE } from './igdb.js';
 import {
   isCanonicalGame,
@@ -52,46 +53,57 @@ function platformIdsFor(consoleName) {
     .map(([id]) => Number(id));
 }
 
-export async function backfillIgdbIds(db, igdb) {
+// Errores de IGDB: se aíslan por juego (backfill, resolución, markUnresolved) y por
+// saga (refresh). Se loguean con `logger` (opción; por defecto el de la app) y el resto
+// sigue; lo que falló queda sin marcar y se reintenta en la próxima corrida.
+
+async function backfillOne(db, igdb, game) {
+  // Ya trae id (p. ej. importado de un backup viejo): se respeta sin buscar.
+  if (game.igdb_id != null) {
+    await db.query(sql(db, "UPDATE games SET igdb_match = 'selected' WHERE id = ?"), [game.id]);
+    return null;
+  }
+  const { rows: catalog } = await db.query(
+    sql(db, 'SELECT igdb_id, title, console_name FROM game_catalog WHERE LOWER(title) = LOWER(?)'),
+    [game.title]
+  );
+  let igdbId = pickCatalogMatch(catalog, game.title, game.console_name);
+  let candidates = null;
+
+  if (igdbId == null) {
+    const results = await igdb.search(game.title, platformIdsFor(game.console_name));
+    const same = results.filter((r) => norm(r.name) === norm(game.title));
+    if (same.length === 1) igdbId = same[0].id;
+    else candidates = results.slice(0, MAX_CANDIDATES).map(toCandidate);
+  }
+
+  if (igdbId != null) {
+    await db.query(
+      sql(db, "UPDATE games SET igdb_id = ?, igdb_match = 'auto', igdb_candidates = NULL WHERE id = ?"),
+      [igdbId, game.id]
+    );
+    return 'auto';
+  }
+  await db.query(
+    sql(db, "UPDATE games SET igdb_match = 'unresolved', igdb_candidates = ? WHERE id = ?"),
+    [JSON.stringify(candidates), game.id]
+  );
+  return 'unresolved';
+}
+
+export async function backfillIgdbIds(db, igdb, { logger = appLogger } = {}) {
   const { rows: games } = await db.query(
     `SELECT g.id, g.title, g.igdb_id, c.name AS console_name
      FROM games g LEFT JOIN consoles c ON g.console_id = c.id
      WHERE g.igdb_match IS NULL`
   );
   const counts = { auto: 0, unresolved: 0 };
-
   for (const game of games) {
-    // Ya trae id (p. ej. importado de un backup viejo): se respeta sin buscar.
-    if (game.igdb_id != null) {
-      await db.query(sql(db, "UPDATE games SET igdb_match = 'selected' WHERE id = ?"), [game.id]);
-      continue;
-    }
-    const { rows: catalog } = await db.query(
-      sql(db, 'SELECT igdb_id, title, console_name FROM game_catalog WHERE LOWER(title) = LOWER(?)'),
-      [game.title]
-    );
-    let igdbId = pickCatalogMatch(catalog, game.title, game.console_name);
-    let candidates = null;
-
-    if (igdbId == null) {
-      const results = await igdb.search(game.title, platformIdsFor(game.console_name));
-      const same = results.filter((r) => norm(r.name) === norm(game.title));
-      if (same.length === 1) igdbId = same[0].id;
-      else candidates = results.slice(0, MAX_CANDIDATES).map(toCandidate);
-    }
-
-    if (igdbId != null) {
-      await db.query(
-        sql(db, "UPDATE games SET igdb_id = ?, igdb_match = 'auto', igdb_candidates = NULL WHERE id = ?"),
-        [igdbId, game.id]
-      );
-      counts.auto += 1;
-    } else {
-      await db.query(
-        sql(db, "UPDATE games SET igdb_match = 'unresolved', igdb_candidates = ? WHERE id = ?"),
-        [JSON.stringify(candidates), game.id]
-      );
-      counts.unresolved += 1;
+    try {
+      const result = await backfillOne(db, igdb, game);
+      if (result) counts[result] += 1;
+    } catch (err) {
+      logger.error({ err, gameId: game.id }, 'IGDB backfill failed for game');
     }
   }
   return counts;
@@ -104,7 +116,7 @@ async function searchCandidates(igdb, title, consoleName) {
 
 // El juego de IGDB no lleva a un principal o remake: los registros que lo usan
 // pasan a revisión del usuario, con candidatos de la búsqueda por título.
-async function markUnresolved(db, igdb, igdbId) {
+async function markUnresolved(db, igdb, igdbId, logger) {
   const { rows } = await db.query(
     sql(db, `SELECT g.id, g.title, c.name AS console_name
      FROM games g LEFT JOIN consoles c ON g.console_id = c.id
@@ -112,15 +124,39 @@ async function markUnresolved(db, igdb, igdbId) {
     [igdbId]
   );
   for (const game of rows) {
-    const candidates = await searchCandidates(igdb, game.title, game.console_name);
+    try {
+      const candidates = await searchCandidates(igdb, game.title, game.console_name);
+      await db.query(
+        sql(db, "UPDATE games SET igdb_match = 'unresolved', igdb_candidates = ? WHERE id = ?"),
+        [JSON.stringify(candidates), game.id]
+      );
+    } catch (err) {
+      logger.error({ err, gameId: game.id }, 'Marking game as unresolved failed');
+    }
+  }
+}
+
+async function saveResolution(db, id, canonical, now) {
+  const saga = largestCollection(canonical.collections);
+  await db.query(
+    sql(db, isSqlite(db)
+      ? 'INSERT OR REPLACE INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id, resolved_at) VALUES (?, ?, ?, ?)'
+      : `INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id, resolved_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (igdb_id) DO UPDATE SET canonical_igdb_id = EXCLUDED.canonical_igdb_id,
+           saga_id = EXCLUDED.saga_id, resolved_at = EXCLUDED.resolved_at`),
+    [id, canonical.id, saga?.id ?? null, now.toISOString()]
+  );
+  if (saga) {
     await db.query(
-      sql(db, "UPDATE games SET igdb_match = 'unresolved', igdb_candidates = ? WHERE id = ?"),
-      [JSON.stringify(candidates), game.id]
+      sql(db, isSqlite(db)
+        ? 'INSERT OR IGNORE INTO sagas (id, name, refreshed_at) VALUES (?, ?, NULL)'
+        : 'INSERT INTO sagas (id, name, refreshed_at) VALUES (?, ?, NULL) ON CONFLICT (id) DO NOTHING'),
+      [saga.id, saga.name]
     );
   }
 }
 
-async function resolvePending(db, igdb, now) {
+async function resolvePending(db, igdb, now, logger) {
   const { rows } = await db.query(
     `SELECT DISTINCT g.igdb_id
      FROM games g LEFT JOIN igdb_resolution r ON r.igdb_id = g.igdb_id
@@ -144,36 +180,21 @@ async function resolvePending(db, igdb, now) {
     for (const g of parents) byId.set(g.id, g);
   }
 
-  const resolvedAt = now.toISOString();
   let resolved = 0;
   for (const id of pending) {
     if (!byId.has(id)) continue;
     const result = climb(id);
     if (result.missing != null) continue;
     if (result.canonical === null) {
-      await markUnresolved(db, igdb, id);
+      await markUnresolved(db, igdb, id, logger);
       continue;
     }
-    const canonical = result.canonical;
-    const saga = largestCollection(canonical.collections);
-
-    await db.query(
-      sql(db, isSqlite(db)
-        ? 'INSERT OR REPLACE INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id, resolved_at) VALUES (?, ?, ?, ?)'
-        : `INSERT INTO igdb_resolution (igdb_id, canonical_igdb_id, saga_id, resolved_at) VALUES (?, ?, ?, ?)
-           ON CONFLICT (igdb_id) DO UPDATE SET canonical_igdb_id = EXCLUDED.canonical_igdb_id,
-             saga_id = EXCLUDED.saga_id, resolved_at = EXCLUDED.resolved_at`),
-      [id, canonical.id, saga?.id ?? null, resolvedAt]
-    );
-    if (saga) {
-      await db.query(
-        sql(db, isSqlite(db)
-          ? 'INSERT OR IGNORE INTO sagas (id, name, refreshed_at) VALUES (?, ?, NULL)'
-          : 'INSERT INTO sagas (id, name, refreshed_at) VALUES (?, ?, NULL) ON CONFLICT (id) DO NOTHING'),
-        [saga.id, saga.name]
-      );
+    try {
+      await saveResolution(db, id, result.canonical, now);
+      resolved += 1;
+    } catch (err) {
+      logger.error({ err, igdbId: id }, 'Saving IGDB resolution failed');
     }
-    resolved += 1;
   }
   return resolved;
 }
@@ -233,8 +254,9 @@ async function refreshSaga(db, igdb, sagaId, now) {
   return true;
 }
 
-export async function syncSagas(db, igdb, { now = new Date(), maxAgeDays = 7, onlySagaId = null } = {}) {
-  const resolved = await resolvePending(db, igdb, now);
+// Con onlySagaId (refresh manual) el error de esa saga se propaga para que la ruta responda 502.
+export async function syncSagas(db, igdb, { now = new Date(), maxAgeDays = 7, onlySagaId = null, logger = appLogger } = {}) {
+  const resolved = await resolvePending(db, igdb, now, logger);
 
   const { rows: due } = onlySagaId != null
     ? await db.query(sql(db, 'SELECT id FROM sagas WHERE id = ?'), [onlySagaId])
@@ -245,7 +267,12 @@ export async function syncSagas(db, igdb, { now = new Date(), maxAgeDays = 7, on
 
   let refreshed = 0;
   for (const { id } of due) {
-    if (await refreshSaga(db, igdb, Number(id), now)) refreshed += 1;
+    try {
+      if (await refreshSaga(db, igdb, Number(id), now)) refreshed += 1;
+    } catch (err) {
+      if (onlySagaId != null) throw err;
+      logger.error({ err, sagaId: Number(id) }, 'Saga refresh failed');
+    }
   }
   return { resolved, refreshed };
 }
@@ -265,12 +292,41 @@ export async function getStatusByCanonical(db) {
   return status;
 }
 
-export async function runSagaJobs(db, igdb, logger) {
+async function runSagaJobsOnce(db, igdb, logger) {
+  let backfill = null;
   try {
-    const backfill = await backfillIgdbIds(db, igdb);
-    const sync = await syncSagas(db, igdb);
+    backfill = await backfillIgdbIds(db, igdb, { logger });
+  } catch (err) {
+    logger.error({ err }, 'IGDB backfill failed');
+  }
+  try {
+    const sync = await syncSagas(db, igdb, { logger });
     logger.info({ backfill, sync }, 'Saga jobs finished');
   } catch (err) {
-    logger.error({ err }, 'Saga jobs failed');
+    logger.error({ err }, 'Saga sync failed');
   }
+}
+
+// Una sola corrida a la vez: si llega otra llamada mientras corre, se agenda una
+// corrida más al terminar (varias llamadas en el medio se juntan en esa una) y
+// la llamada se resuelve cuando termina todo. Nunca lanza.
+let current = null;
+let runAgain = false;
+
+export function runSagaJobs(db, igdb, logger) {
+  if (current) {
+    runAgain = true;
+    return current;
+  }
+  current = (async () => {
+    try {
+      do {
+        runAgain = false;
+        await runSagaJobsOnce(db, igdb, logger);
+      } while (runAgain);
+    } finally {
+      current = null;
+    }
+  })();
+  return current;
 }

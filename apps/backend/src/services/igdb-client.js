@@ -65,7 +65,7 @@ export function createIgdbClient({
   }
 
   function search(title, platformIds) {
-    const clean = String(title).replace(/"/g, '');
+    const clean = String(title).replace(/"/g, '').replace(/\\/g, '\\\\');
     const where = platformIds?.length ? ` where platforms = (${platformIds.join(',')});` : '';
     return query('games', `search "${clean}"; fields ${SAGA_GAME_FIELDS};${where} limit 10;`);
   }

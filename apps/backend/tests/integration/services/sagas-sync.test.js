@@ -357,7 +357,125 @@ describe('getStatusByCanonical', () => {
   });
 });
 
+const fakeLogger = () => ({ error: mock.fn(), info: mock.fn(), warn: mock.fn() });
+
+describe('errores de IGDB aislados', () => {
+  it('un título cuyo search lanza no impide procesar el siguiente', async () => {
+    const roto = await addGame({ title: 'Roto' });
+    const sano = await addGame({ title: 'Sano' });
+    const igdb = fakeIgdb({ searchResults: { Sano: [{ id: 501, name: 'Sano' }] } });
+    igdb.search = mock.fn(async (title) => {
+      if (title === 'Roto') throw new Error('IGDB 500');
+      return [{ id: 501, name: 'Sano' }];
+    });
+    const logger = fakeLogger();
+
+    const result = await backfillIgdbIds(db, igdb, { logger });
+
+    assert.equal((await gameRow(sano)).igdb_id, 501);
+    assert.equal((await gameRow(roto)).igdb_match, null, 'queda para la próxima corrida');
+    assert.deepEqual(result, { auto: 1, unresolved: 0 });
+    assert.equal(logger.error.mock.callCount(), 1);
+    assert.equal(logger.error.mock.calls[0].arguments[0].err.message, 'IGDB 500');
+  });
+
+  it('un search que lanza al marcar unresolved no impide marcar el siguiente', async () => {
+    const a = await addGame({ title: 'Bundle A', igdb_id: 8001, igdb_match: 'selected' });
+    const b = await addGame({ title: 'Bundle B', igdb_id: 8002, igdb_match: 'selected' });
+    const igdb = fakeIgdb({
+      games: { 8001: { id: 8001, game_type: 3 }, 8002: { id: 8002, game_type: 3 } },
+    });
+    igdb.search = mock.fn(async (title) => {
+      if (title === 'Bundle A') throw new Error('IGDB 500');
+      return [{ id: 8002, name: 'Bundle B' }];
+    });
+    const logger = fakeLogger();
+
+    await syncSagas(db, igdb, { logger });
+
+    assert.equal((await gameRow(a)).igdb_match, 'selected');
+    assert.equal((await gameRow(b)).igdb_match, 'unresolved');
+    assert.equal(logger.error.mock.callCount(), 1);
+  });
+
+  it('una saga cuyo collectionMembers lanza no impide refrescar la siguiente', async () => {
+    await db.query("INSERT INTO sagas (id, name, refreshed_at) VALUES (39, 'Final Fantasy', NULL), (112, 'Tales of', NULL)");
+    const tos = { id: 1217, name: 'Tales of Symphonia', game_type: 0, collections: [{ id: 112, name: 'Tales of', games: [1217] }] };
+    const igdb = fakeIgdb();
+    igdb.collectionMembers = mock.fn(async (cid) => {
+      if (cid === 39) throw new Error('IGDB 500');
+      return [tos];
+    });
+    const logger = fakeLogger();
+
+    const result = await syncSagas(db, igdb, { logger });
+
+    const { rows } = await db.query('SELECT igdb_id FROM saga_games WHERE saga_id = 112');
+    assert.deepEqual(rows.map((r) => r.igdb_id), [1217]);
+    assert.equal(result.refreshed, 1);
+    assert.equal(igdb.collectionMembers.mock.callCount(), 2);
+    assert.equal(logger.error.mock.callCount(), 1);
+  });
+
+  it('con onlySagaId el error de la saga se propaga (el refresh manual responde 502)', async () => {
+    await db.query("INSERT INTO sagas (id, name, refreshed_at) VALUES (39, 'Final Fantasy', NULL)");
+    const igdb = fakeIgdb();
+    igdb.collectionMembers = mock.fn(async () => { throw new Error('IGDB 500'); });
+
+    await assert.rejects(() => syncSagas(db, igdb, { onlySagaId: 39, logger: fakeLogger() }), { message: 'IGDB 500' });
+  });
+});
+
 describe('runSagaJobs', () => {
+  it('corre syncSagas aunque backfillIgdbIds falle', async () => {
+    await addGame({ title: 'Final Fantasy X', igdb_id: 418, igdb_match: 'selected' });
+    const brokenDb = Object.create(db);
+    brokenDb.query = (text, params) => {
+      if (text.includes('WHERE g.igdb_match IS NULL')) return Promise.reject(new Error('backfill roto'));
+      return db.query(text, params);
+    };
+    const igdb = sagaIgdb();
+    const logger = fakeLogger();
+
+    await runSagaJobs(brokenDb, igdb, logger);
+
+    assert.equal(logger.error.mock.calls[0].arguments[0].err.message, 'backfill roto');
+    const { rows } = await db.query('SELECT canonical_igdb_id FROM igdb_resolution WHERE igdb_id = 418');
+    assert.equal(rows[0].canonical_igdb_id, 418);
+  });
+
+  it('no corre dos veces en paralelo: la llamada que llega durante una corrida agenda una más al terminar', async () => {
+    const first = await addGame({ title: 'Lento Uno' });
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const igdb = fakeIgdb();
+    igdb.search = mock.fn(async (title) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      if (title === 'Lento Uno') await gate;
+      inFlight -= 1;
+      return [{ id: title === 'Lento Uno' ? 601 : 602, name: title }];
+    });
+    const logger = fakeLogger();
+
+    const p1 = runSagaJobs(db, igdb, logger);
+    while (igdb.search.mock.callCount() === 0) await new Promise((r) => setTimeout(r, 5));
+    const second = await addGame({ title: 'Lento Dos' });
+    const p2 = runSagaJobs(db, igdb, logger);
+    const p3 = runSagaJobs(db, igdb, logger);
+    await new Promise((r) => setTimeout(r, 50)); // tiempo para que una corrida paralela llegue a IGDB
+    release();
+    await Promise.all([p1, p2, p3]);
+
+    assert.equal(maxInFlight, 1);
+    assert.deepEqual(igdb.search.mock.calls.map((c) => c.arguments[0]), ['Lento Uno', 'Lento Dos']);
+    assert.equal((await gameRow(first)).igdb_id, 601);
+    assert.equal((await gameRow(second)).igdb_id, 602);
+    assert.equal(logger.info.mock.callCount(), 2, 'una corrida más, no dos');
+  });
+
   it('no lanza si IGDB falla y loguea el error', async () => {
     await addGame({ title: 'Final Fantasy X', igdb_id: 418, igdb_match: 'selected' });
     const igdb = sagaIgdb();
