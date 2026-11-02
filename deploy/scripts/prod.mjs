@@ -158,5 +158,21 @@ switch (cmd) {
   case 'restore': await restore(arg); break;
   case 'rollback': await rollback(); break;
   case 'status': await status(); break;
-  default: die('Uso: prod.mjs deploy <X.Y.Z> | backup | restore <archivo> | rollback | status');
+  case 'start': {
+    // Levanta la versión ya desplegada (sin bajar imágenes ni tocar datos).
+    const version = currentVersion();
+    if (!version) die('Prod nunca se desplegó: primero npm run prod:deploy -- X.Y.Z');
+    const env = envFor(version);
+    startDb(env);
+    if (!upAll(env)) die(`Prod no quedó healthy. Logs: ${LOGS_CMD}`);
+    console.log(`✔ Prod v${version} arriba: http://localhost:${cfg.FRONT_PORT}`);
+    break;
+  }
+  case 'stop': {
+    // Baja los contenedores; el volumen external de datos no se toca.
+    if (compose(ENV, ['down', '--remove-orphans'], { env: envFor(currentVersion()) }) !== 0) die('No se pudo bajar prod');
+    console.log('✔ Prod abajo (los datos quedan en el volumen)');
+    break;
+  }
+  default: die('Uso: prod.mjs deploy <X.Y.Z> | start | stop | backup | restore <archivo> | rollback | status');
 }

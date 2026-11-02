@@ -2,9 +2,15 @@
 
 Los dos ambientes corren en Docker en esta PC, aislados por nombre de proyecto compose. Todo se maneja con npm scripts desde la raíz del repo.
 
+## Uso diario: el acceso directo
+
+El acceso directo **Games Tracker** del escritorio abre `games-tracker.cmd` (raíz del repo), un menú para levantar y bajar Prod, QA y Dev, abrir la web, ver el estado y hacer backups. Si Docker Desktop está cerrado, lo inicia. Para recrear el acceso directo: `npm run shortcut`.
+
+> El puerto de prod es **8090** porque el 8080 de esta PC lo usa otro servicio (`MTAgentService`).
+
 | | QA | Prod |
 |---|---|---|
-| URL | http://localhost:8081 | http://localhost:8080 |
+| URL | http://localhost:8081 | http://localhost:8090 |
 | Proyecto compose | `gt-qa` | `gt-prod` |
 | Configuración | `deploy/qa.env` | `deploy/prod.env` |
 | Volumen | `gt-qa_db_data` (se borra con `qa:reset`) | `gt-prod_db_data` (**external**: ningún comando lo borra) |
@@ -58,6 +64,8 @@ docker build -f apps/frontend/Dockerfile -t ghcr.io/ferrazp/games-tracker-fronte
 | Comando | Qué hace |
 |---|---|
 | `npm run prod:deploy -- X.Y.Z` | Despliega un release (ver arriba) |
+| `npm run prod:start` | Levanta la versión ya desplegada (sin bajar imágenes ni tocar datos) |
+| `npm run prod:stop` | Baja los contenedores; los datos quedan en el volumen |
 | `npm run prod:status` | Versión desplegada, contenedores, `/api/version`, conteos y último backup |
 | `npm run prod:backup` | Backup ahora |
 | `npm run prod:restore -- <archivo.sql.gz>` | Reemplaza los datos de prod; antes hace un backup de seguridad; pide escribir `prod` |

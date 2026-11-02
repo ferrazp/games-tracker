@@ -5,7 +5,7 @@ Registro personal de videojuegos jugados. Un solo repo (`ferrazp/games-tracker`)
 ## Estructura
 
 ```
-games-tracker/                 F:\projects\developments\games-tracker-monorepo
+games-tracker/                 F:\projects\developments\games-tracker
 ├── apps/
 │   ├── backend/               Express 5 + SQLite/Postgres (workspace "games-backend") — ver apps/backend/AGENTS.md
 │   └── frontend/              React 19 + Vite 7 (workspace "games-tracker") — ver apps/frontend/AGENTS.md
@@ -32,8 +32,10 @@ games-tracker/                 F:\projects\developments\games-tracker-monorepo
 | `npm run build` | Build del front |
 | `npm run qa:up -- --tag <main\|sha-xxx\|X.Y.Z>` | QA en `http://localhost:8081` |
 | `npm run qa:reset` | Borra QA y sus datos (pide escribir `qa`) |
-| `npm run prod:deploy -- X.Y.Z` | Despliega un release en `http://localhost:8080` |
+| `npm run prod:deploy -- X.Y.Z` | Despliega un release en `http://localhost:8090` |
+| `npm run prod:start` / `prod:stop` | Levantar / bajar prod sin redesplegar |
 | `npm run prod:status` / `prod:backup` / `prod:restore` / `prod:rollback` | Ver `docs/OPERACION.md` |
+| `npm run menu` / `games-tracker.cmd` | Menú del acceso directo del escritorio (`npm run shortcut` lo crea) |
 
 Para un solo workspace: `npm test -w games-backend`, `npm test -w games-tracker`.
 

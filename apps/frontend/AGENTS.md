@@ -41,7 +41,7 @@ games-tracker/
 ## 🚀 Quick Start
 
 ```powershell
-cd F:\projects\developments\games-tracker-monorepo
+cd F:\projects\developments\games-tracker
 npm run dev                     # backend :4000 + front :3000 (HMR)
 npm start -w games-tracker      # solo el front
 ```

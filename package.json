@@ -21,7 +21,11 @@
     "prod:backup": "node deploy/scripts/prod.mjs backup",
     "prod:restore": "node deploy/scripts/prod.mjs restore",
     "prod:rollback": "node deploy/scripts/prod.mjs rollback",
-    "prod:status": "node deploy/scripts/prod.mjs status"
+    "prod:status": "node deploy/scripts/prod.mjs status",
+    "prod:start": "node deploy/scripts/prod.mjs start",
+    "prod:stop": "node deploy/scripts/prod.mjs stop",
+    "menu": "node deploy/scripts/menu.mjs",
+    "shortcut": "node deploy/scripts/shortcut.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

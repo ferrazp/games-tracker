@@ -17,7 +17,7 @@ API REST para tracking personal de videojuegos. Permite gestionar una colección
 |---|---|---|---|---|
 | **Dev** | `npm run dev` | `:3000` | `:4000` | SQLite `apps/backend/games.db` |
 | **QA** | `npm run qa:up` | `:8081` | `/api` | Postgres propio (`gt-qa`) |
-| **Prod** | `npm run prod:deploy -- X.Y.Z` | `:8080` | `/api` | Postgres propio (`gt-prod`) |
+| **Prod** | `npm run prod:deploy -- X.Y.Z` | `:8090` | `/api` | Postgres propio (`gt-prod`) |
 
 ## Quick Start (dev)
 

@@ -5,7 +5,7 @@ description: Use when the user says "próximo paso", "next step", "siguiente pas
 
 # Próximo paso (GitHub Flow)
 
-Monorepo único: `F:\projects\developments\games-tracker-monorepo` (`ferrazp/games-tracker`). Backend y frontend van en la **misma rama y el mismo PR**.
+Monorepo único: `F:\projects\developments\games-tracker` (`ferrazp/games-tracker`). Backend y frontend van en la **misma rama y el mismo PR**.
 
 ## 1. Rama corta desde main
 
@@ -40,7 +40,7 @@ El título del PR es el commit en `main` y decide la versión: `feat` → minor,
 
 1. Unir el PR `chore(main): release X.Y.Z` de release-please → tag, GitHub Release e imágenes `:X.Y.Z`.
 2. `npm run qa:up -- --tag X.Y.Z` → el usuario prueba en http://localhost:8081.
-3. `npm run prod:deploy -- X.Y.Z` → http://localhost:8080.
+3. `npm run prod:deploy -- X.Y.Z` → http://localhost:8090.
 
 Ver `docs/OPERACION.md`.
 

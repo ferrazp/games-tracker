@@ -68,7 +68,7 @@ Si vence, el workflow *Release* falla con un error de autenticación: se repiten
 | Qué corre | código local (`npm run dev`) | imagen `:main`, `:sha-xxx` o `:X.Y.Z` | imagen `:X.Y.Z` (solo releases) |
 | BD | SQLite local (`apps/backend/games.db`) | Postgres propio | Postgres propio |
 | Proyecto compose | — | `gt-qa` | `gt-prod` |
-| Frontend | `http://localhost:3000` | `http://localhost:8081` | `http://localhost:8080` |
+| Frontend | `http://localhost:3000` | `http://localhost:8081` | `http://localhost:8090` |
 | API publicada | `:4000` | no (solo `/api` a través del front) | no (solo `/api` a través del front) |
 | Postgres publicado | — | `127.0.0.1:5434` | no publicado |
 | Archivo de entorno | `apps/backend/.env` | `deploy/qa.env` | `deploy/prod.env` |

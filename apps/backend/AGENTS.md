@@ -56,7 +56,7 @@ El frontend está en el mismo monorepo: [`apps/frontend`](../frontend/AGENTS.md)
 
 **Última actualización**: 2026-11-02
 **Monorepo**: `ferrazp/games-tracker` (npm workspaces); este paquete es el workspace `games-backend`
-**Ambientes**: Dev (SQLite, `:4000`), QA (`gt-qa`, `:8081`), Prod (`gt-prod`, `:8080`), API solo vía `/api` en QA/Prod
+**Ambientes**: Dev (SQLite, `:4000`), QA (`gt-qa`, `:8081`), Prod (`gt-prod`, `:8090`), API solo vía `/api` en QA/Prod
 **Modo BD por Defecto**: SQLite (desarrollo local); PostgreSQL 17 en QA y Prod
 **Flujo git**: GitHub Flow + Conventional Commits + release-please (ver [CONTRIBUTING.md](../../CONTRIBUTING.md))
 **Operación**: [docs/OPERACION.md](../../docs/OPERACION.md)
