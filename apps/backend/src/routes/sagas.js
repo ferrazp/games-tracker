@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { getDatabase, DB_TYPE } from '../../db/database.js';
 import logger from '../../db/logger.js';
 import { config } from '../config.js';
@@ -9,6 +10,15 @@ import { buildSagaDetail, suggestedVersion, searchLinks, releaseYear } from '../
 import { parseIgdbId } from '../validators/game.js';
 
 const router = Router();
+
+// Límite para las rutas con sesión (las que escriben o llaman a IGDB).
+const sessionLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados pedidos, probá de nuevo en un rato.' }
+});
 
 const MAX_COVERS = 3;
 const REGISTERED = "(g.igdb_match IS NULL OR g.igdb_match NOT IN ('none', 'unresolved'))";
@@ -113,7 +123,7 @@ router.get('/sagas', async (req, res) => {
   }
 });
 
-router.get('/sagas/unresolved', requireJWT, async (req, res) => {
+router.get('/sagas/unresolved', sessionLimiter, requireJWT, async (req, res) => {
   try {
     const db = getDatabase();
     const { rows } = await db.query(
@@ -185,7 +195,7 @@ router.get('/sagas/:id', async (req, res) => {
   }
 });
 
-router.post('/sagas/:id/refresh', requireJWT, async (req, res) => {
+router.post('/sagas/:id/refresh', sessionLimiter, requireJWT, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(404).json({ error: 'Saga no encontrada' });
   if (!config.twitch.hasCredentials) {
@@ -215,7 +225,7 @@ router.post('/sagas/:id/refresh', requireJWT, async (req, res) => {
   }
 });
 
-router.put('/games/:id/igdb', requireJWT, async (req, res) => {
+router.put('/games/:id/igdb', sessionLimiter, requireJWT, async (req, res) => {
   try {
     const id = parseId(req.params.id);
     if (!id) return res.status(404).json({ error: 'Game not found' });

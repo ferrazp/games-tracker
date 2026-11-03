@@ -198,4 +198,13 @@ describe('API de sagas', () => {
     const ff = list.body.sagas.find((s) => s.id === 39);
     assert.deepEqual(ff.counts, { completed: 1, pending: 0, missing: 2, total: 3 });
   });
+
+  it('limita la cantidad de pedidos en las rutas con sesión', async () => {
+    const unresolved = await request(getApp()).get('/sagas/unresolved').set('Authorization', getAuth());
+    assert.equal(unresolved.headers['ratelimit-limit'], '60');
+    const put = await request(getApp()).put('/games/987654/igdb').set('Authorization', getAuth()).send({ igdb_id: 5 });
+    assert.equal(put.headers['ratelimit-limit'], '60');
+    const refresh = await request(getApp()).post('/sagas/39/refresh').set('Authorization', getAuth());
+    assert.equal(refresh.headers['ratelimit-limit'], '60');
+  });
 });
