@@ -95,6 +95,7 @@ Si solo hay que volver a una versión puntual sin tocar datos: `npm run prod:dep
 - El backend corre los jobs de sagas (completar IDs de IGDB, resolver cada juego a su juego canónico y su saga, refrescar las sagas de más de 7 días) **10 s después de arrancar y luego cada 24 h**, solo si hay credenciales de IGDB (`TWITCH_CLIENT_ID` y `TWITCH_CLIENT_SECRET`). Sin credenciales la pestaña Sagas muestra que falta configurarlas.
 - También corren en segundo plano al crear o editar un juego y al elegir su juego de IGDB, así no hay que esperar al job diario. Nunca corren dos a la vez: si llega un pedido mientras corren, se hace una corrida más al terminar.
 - Un error de IGDB en un juego o una saga se loguea y el resto sigue; lo que falló se reintenta en la próxima corrida.
+- Los juegos que se archivan desde el menú ⋯ de una saga quedan en la tabla `saga_archived`, aparte del caché de IGDB: los refrescos no los deshacen y se recuperan con **Restaurar** en *Archivados* del mismo menú.
 - Para ensayar con datos reales, levantar QA con un backup de prod (no toca prod):
   ```bash
   npm run qa:up -- --tag <tag> --restore <backup>

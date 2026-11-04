@@ -176,3 +176,80 @@ test('una portada que falla muestra el título en un recuadro', async () => {
   expect(screen.queryByAltText('Tales Uno')).not.toBeInTheDocument();
   expect(screen.getByText('Tales Uno')).toBeInTheDocument();
 });
+
+describe('archivar juegos', () => {
+  const withArchived = { ...detail, archived: [{ igdb_id: 9, name: 'Tales Spin-off', release_year: 1999, cover_url: null }] };
+  const afterArchive = {
+    ...detail,
+    counts: { completed: 1, pending: 1, missing: 0, total: 2 },
+    groups: [detail.groups[0]],
+    archived: [...withArchived.archived, { igdb_id: 3, name: 'Tales Tres', release_year: null, cover_url: null }],
+  };
+
+  test('sin sesión no aparece el menú de opciones', async () => {
+    mockFetch({ 'GET /sagas/39': { body: withArchived } });
+    renderDetail();
+    await screen.findByRole('button', { name: '← Tales' });
+    expect(screen.queryByRole('button', { name: 'Más opciones' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Archivar/ })).not.toBeInTheDocument();
+  });
+
+  test('desde el menú se entra al modo archivar y la ✕ archiva el juego', async () => {
+    mockFetch({ 'GET /sagas/39': { body: withArchived }, 'PUT /sagas/games/3/archive': { body: afterArchive } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByRole('button', { name: '← Tales' });
+
+    expect(screen.queryByRole('button', { name: 'Archivar Tales Tres' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Más opciones' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Archivar juegos' }));
+
+    await user.click(screen.getByRole('button', { name: 'Archivar Tales Tres' }));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/sagas\/games\/3\/archive$/), expect.objectContaining({ method: 'PUT' }));
+    expect(await screen.findByText('1 completado · 1 pendiente · te faltan 0 de 2')).toBeInTheDocument();
+    expect(screen.queryByText('Tales Tres')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Listo' }));
+    expect(screen.queryByRole('button', { name: /^Archivar Tales/ })).not.toBeInTheDocument();
+  });
+
+  test('la lista de archivados muestra la cantidad y permite restaurar', async () => {
+    mockFetch({ 'GET /sagas/39': { body: withArchived }, 'DELETE /sagas/games/9/archive': { body: { ...detail, archived: [] } } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByRole('button', { name: '← Tales' });
+
+    await user.click(screen.getByRole('button', { name: 'Más opciones' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Archivados (1)' }));
+    expect(screen.getByText('Tales Spin-off')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Restaurar Tales Spin-off' }));
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/sagas\/games\/9\/archive$/), expect.objectContaining({ method: 'DELETE' }));
+    expect(await screen.findByText('No hay juegos archivados.')).toBeInTheDocument();
+  });
+
+  test('si falla el archivo muestra el error y deja el juego', async () => {
+    mockFetch({ 'GET /sagas/39': { body: withArchived }, 'PUT /sagas/games/3/archive': { status: 500, body: { error: 'No se pudo archivar el juego' } } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByRole('button', { name: '← Tales' });
+
+    await user.click(screen.getByRole('button', { name: 'Más opciones' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Archivar juegos' }));
+    await user.click(screen.getByRole('button', { name: 'Archivar Tales Tres' }));
+    expect(await screen.findByText('No se pudo archivar el juego')).toBeInTheDocument();
+    expect(screen.getByText('Tales Tres')).toBeInTheDocument();
+  });
+
+  test('el menú se cierra con Escape', async () => {
+    mockFetch({ 'GET /sagas/39': { body: withArchived } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByRole('button', { name: '← Tales' });
+    await user.click(screen.getByRole('button', { name: 'Más opciones' }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
