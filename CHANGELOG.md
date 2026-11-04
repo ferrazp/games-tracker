@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/ferrazp/games-tracker/compare/v1.8.0...v1.9.0) (2026-11-04)
+
+
+### Funcionalidades
+
+* show the sagas' own covers in the side panels ([#36](https://github.com/ferrazp/games-tracker/issues/36)) ([d598d60](https://github.com/ferrazp/games-tracker/commit/d598d606f041019c72acb06f23df3714a4d97115))
+
 ## [1.8.0](https://github.com/ferrazp/games-tracker/compare/v1.7.0...v1.8.0) (2026-11-04)
 
 
