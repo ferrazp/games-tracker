@@ -21,6 +21,7 @@ const sessionLimiter = rateLimit({
 });
 
 const MAX_COVERS = 3;
+const MAX_SIDE_COVERS = 16;
 const REGISTERED = "(g.igdb_match IS NULL OR g.igdb_match NOT IN ('none', 'unresolved'))";
 
 let igdbClient = null;
@@ -119,6 +120,23 @@ async function setArchived(req, res, archive) {
   }
 }
 
+// Portadas para los paneles de los costados: alterna entre sagas (una de cada una por vuelta)
+// para que estén todas representadas, sin repetir, hasta MAX_SIDE_COVERS.
+function sideCoverMix(lists) {
+  const out = [];
+  const seen = new Set();
+  for (let i = 0; out.length < MAX_SIDE_COVERS && lists.some((l) => i < l.length); i++) {
+    for (const list of lists) {
+      const url = list[i];
+      if (url && !seen.has(url) && out.length < MAX_SIDE_COVERS) {
+        seen.add(url);
+        out.push(url);
+      }
+    }
+  }
+  return out;
+}
+
 router.get('/sagas', async (req, res) => {
   try {
     const db = getDatabase();
@@ -132,6 +150,7 @@ router.get('/sagas', async (req, res) => {
     const status = await getStatusByCanonical(db);
     const { rows: sagaRows } = await db.query('SELECT id, name FROM sagas');
     const sagas = [];
+    const coversBySaga = new Map();
     for (const row of sagaRows) {
       const id = Number(row.id);
       const mine = canonicalBySaga.get(id);
@@ -143,10 +162,16 @@ router.get('/sagas', async (req, res) => {
         .slice(0, MAX_COVERS)
         .map((g) => g.cover_url);
       sagas.push({ id, name: row.name, counts, covers });
+      const withCover = games.filter((g) => g.cover_url);
+      coversBySaga.set(id, [
+        ...withCover.filter((g) => mine.has(g.igdb_id)),
+        ...withCover.filter((g) => !mine.has(g.igdb_id)),
+      ].map((g) => g.cover_url));
     }
     sagas.sort((a, b) =>
       (b.counts.completed + b.counts.pending) - (a.counts.completed + a.counts.pending)
       || a.name.localeCompare(b.name));
+    const sideCovers = sideCoverMix(sagas.map((saga) => coversBySaga.get(saga.id)));
 
     const { rows: unresolved } = await db.query(
       "SELECT COUNT(*) AS n FROM games WHERE igdb_match = 'unresolved'"
@@ -155,6 +180,7 @@ router.get('/sagas', async (req, res) => {
       configured: config.twitch.hasCredentials,
       unresolved_count: Number(unresolved[0].n),
       sagas,
+      side_covers: sideCovers,
     });
   } catch (error) {
     logger.error({ err: error }, 'Error fetching sagas');

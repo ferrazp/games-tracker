@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import API_URL from '../config';
 
-function SidePanels({ consoleId }) {
+// covers: portadas propias de la pantalla (p. ej. Sagas); vacío o null usa las aleatorias.
+function SidePanels({ consoleId, covers: override = null }) {
   const [covers, setCovers] = useState([]);
   const cacheRef = useRef({});
 
@@ -27,12 +28,13 @@ function SidePanels({ consoleId }) {
     return () => { cancelled = true; };
   }, [consoleId]);
 
-  if (covers.length === 0) return null;
+  const shown = override?.length ? override : covers;
+  if (shown.length === 0) return null;
 
   const perSide = 8;
   const sides = [
-    { covers: covers.slice(0, perSide), side: 'left' },
-    { covers: covers.slice(perSide, perSide * 2), side: 'right' },
+    { covers: shown.slice(0, perSide), side: 'left' },
+    { covers: shown.slice(perSide, perSide * 2), side: 'right' },
   ];
 
   return (

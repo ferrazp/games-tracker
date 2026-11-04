@@ -402,7 +402,7 @@ Datos cacheados de IGDB (los arma el job de sagas; ver [OPERACION.md](../../../.
 
 | Endpoint | Método | Auth | Qué hace |
 |---|---|---|---|
-| `/sagas` | GET | — | `{ configured, unresolved_count, sagas: [{ id, name, counts, covers }] }` |
+| `/sagas` | GET | — | `{ configured, unresolved_count, sagas: [{ id, name, counts, covers }], side_covers }` (`side_covers`: hasta 16 portadas de las sagas, alternando entre ellas, primero las de juegos registrados) |
 | `/sagas/:id` | GET | — | Detalle: `counts` y `groups` por año con el estado de cada juego (`completed`, `pending`, `missing`), y `archived` (juegos archivados, por nombre); 404 si no hay juegos registrados de esa saga |
 | `/sagas/:id/refresh` | POST | JWT | Vuelve a pedir la saga a IGDB y devuelve el detalle; 503 sin credenciales, 502 si falla IGDB |
 | `/sagas/games/:igdbId/archive` | PUT | JWT | Archiva el juego: sale de la grilla y de los totales hasta restaurarlo (el refresco de IGDB no lo deshace). Devuelve el detalle de su saga; 404 si no está en ninguna |

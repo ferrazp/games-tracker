@@ -110,3 +110,48 @@ test('una respuesta vieja que llega tarde no pisa a la más reciente', async () 
   expect(screen.getByText('Nueva')).toBeInTheDocument();
   expect(screen.queryByText('Vieja')).not.toBeInTheDocument();
 });
+
+describe('portadas de los costados', () => {
+  const list = {
+    configured: true,
+    unresolved_count: 0,
+    sagas: [saga(39, 'Final Fantasy', { completed: 1, pending: 0, missing: 1, total: 2 })],
+    side_covers: ['https://x/ff.jpg', 'https://x/tales.jpg'],
+  };
+  const detail = {
+    id: 39,
+    name: 'Final Fantasy',
+    counts: { completed: 1, pending: 0, missing: 1, total: 2 },
+    groups: [{ year: 2000, games: [
+      { igdb_id: 1, name: 'FF IX', release_year: 2000, cover_url: 'https://x/ix.jpg', status: 'completed' },
+      { igdb_id: 2, name: 'FF X', release_year: 2000, cover_url: 'https://x/x.jpg', status: 'missing' },
+      { igdb_id: 3, name: 'FF sin tapa', release_year: 2000, cover_url: null, status: 'missing' },
+    ] }],
+    archived: [],
+  };
+
+  beforeEach(() => {
+    global.fetch = vi.fn(async (url) => ({
+      ok: true,
+      status: 200,
+      json: async () => (url.endsWith('/sagas/39') ? detail : list),
+    }));
+  });
+
+  test('en la lista usa las portadas de las sagas y en la saga las de sus juegos', async () => {
+    const onSideCovers = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(<Sagas getHeaders={getHeaders} isAuthenticated onSideCovers={onSideCovers} />);
+
+    await screen.findByText('Final Fantasy');
+    expect(onSideCovers).toHaveBeenLastCalledWith(['https://x/ff.jpg', 'https://x/tales.jpg']);
+
+    await user.click(screen.getByText('Final Fantasy'));
+    await screen.findByText('FF IX');
+    const sagaCovers = onSideCovers.mock.lastCall[0];
+    expect([...sagaCovers].sort()).toEqual(['https://x/ix.jpg', 'https://x/x.jpg']);
+
+    unmount();
+    expect(onSideCovers).toHaveBeenLastCalledWith(null);
+  });
+});

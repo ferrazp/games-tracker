@@ -207,4 +207,10 @@ describe('API de sagas', () => {
     const refresh = await request(getApp()).post('/sagas/39/refresh').set('Authorization', getAuth());
     assert.equal(refresh.headers['ratelimit-limit'], '60');
   });
+
+  it('GET /sagas trae portadas para los costados, alternando entre sagas y primero las registradas', async () => {
+    const res = await request(getApp()).get('/sagas');
+    // FF (más juegos registrados) va primero: IX y X registrados, VII sin portada; luego Tales.
+    assert.deepEqual(res.body.side_covers, ['https://img/ix.jpg', 'https://img/sym.jpg', 'https://img/x.jpg']);
+  });
 });

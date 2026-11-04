@@ -36,6 +36,7 @@ function App() {
   const [selectedConsoleId, setSelectedConsoleId] = useState(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [activeTab, setActiveTab] = useState('games');
+  const [sagaCovers, setSagaCovers] = useState(null);
   const [sessionNotice, setSessionNotice] = useState('');
 
   const getHeaders = useCallback(() => {
@@ -144,7 +145,7 @@ function App() {
 
   return (
     <div className="App">
-      <SidePanels consoleId={selectedConsoleId} />
+      <SidePanels consoleId={selectedConsoleId} covers={activeTab === 'sagas' ? sagaCovers : null} />
       <div className="app-header">
         <h1>Registro de Juegos</h1>
         <div className="app-header-right">
@@ -181,7 +182,7 @@ function App() {
       {activeTab === 'wishlist' ? (
         <Wishlist getHeaders={getHeaders} />
       ) : activeTab === 'sagas' ? (
-        <Sagas getHeaders={getHeaders} isAuthenticated={!!token} />
+        <Sagas getHeaders={getHeaders} isAuthenticated={!!token} onSideCovers={setSagaCovers} />
       ) : (
         <>
           <GameForm onGameAdded={handleGameAdded} getHeaders={getHeaders} onConsoleSelect={setSelectedConsoleId} />
