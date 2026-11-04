@@ -42,7 +42,19 @@ function Cover({ game, onSuggest, onArchive }) {
   );
 }
 
-export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated }) {
+const MAX_SIDE_COVERS = 16;
+
+// Portadas de los juegos de la saga, mezcladas, para los paneles de los costados.
+function sideCoversOf(detail) {
+  const urls = detail.groups.flatMap((g) => g.games.map((game) => game.cover_url)).filter(Boolean);
+  for (let i = urls.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [urls[i], urls[j]] = [urls[j], urls[i]];
+  }
+  return urls.slice(0, MAX_SIDE_COVERS);
+}
+
+export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated, onCovers }) {
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
@@ -88,6 +100,12 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
   useEffect(() => {
     load();
   }, [load]);
+
+  const onCoversRef = useRef(onCovers);
+  onCoversRef.current = onCovers;
+  useEffect(() => {
+    if (detail) onCoversRef.current?.(sideCoversOf(detail));
+  }, [detail]);
 
   const refresh = async () => {
     setRefreshing(true);

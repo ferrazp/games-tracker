@@ -35,7 +35,7 @@ function SagaCard({ saga, onOpen }) {
   );
 }
 
-function Sagas({ getHeaders, isAuthenticated }) {
+function Sagas({ getHeaders, isAuthenticated, onSideCovers }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,6 +67,14 @@ function Sagas({ getHeaders, isAuthenticated }) {
     load();
   }, [load]);
 
+  // Portadas de los costados: en la lista, las de mis sagas (en una saga las pone SagaDetail).
+  const sideCoversRef = useRef(onSideCovers);
+  sideCoversRef.current = onSideCovers;
+  useEffect(() => {
+    if (selectedId === null && data) sideCoversRef.current?.(data.side_covers ?? null);
+  }, [data, selectedId]);
+  useEffect(() => () => sideCoversRef.current?.(null), []);
+
   if (selectedId !== null) {
     return (
       <SagaDetail
@@ -74,6 +82,7 @@ function Sagas({ getHeaders, isAuthenticated }) {
         onBack={() => { setSelectedId(null); load(); }}
         getHeaders={getHeaders}
         isAuthenticated={isAuthenticated}
+        onCovers={onSideCovers}
       />
     );
   }
