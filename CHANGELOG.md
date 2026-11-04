@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/ferrazp/games-tracker/compare/v1.9.1...v1.10.0) (2026-11-04)
+
+
+### Funcionalidades
+
+* link versions of the same saga game so they count as played ([#40](https://github.com/ferrazp/games-tracker/issues/40)) ([345e7f5](https://github.com/ferrazp/games-tracker/commit/345e7f5901c0c6112b44b27991f6a65b2de78395))
+
 ## [1.9.1](https://github.com/ferrazp/games-tracker/compare/v1.9.0...v1.9.1) (2026-11-04)
 
 
