@@ -1,6 +1,6 @@
 # Games Tracker Backend
 
-API REST para tracking personal de videojuegos. Permite gestionar una colección de juegos jugados, con catálogo precargado desde IGDB, soporte multi-plataforma y validación contextual (año jugado vs año de lanzamiento de consola).
+API REST para tracking personal de videojuegos. Permite gestionar una colección de juegos jugados, con catálogo precargado desde IGDB, soporte multi-plataforma, validación contextual (año jugado vs año de lanzamiento de consola) y **sagas** armadas con las series de IGDB.
 
 ## Stack
 
@@ -32,16 +32,28 @@ QA, Prod, backups y rollback: [`docs/OPERACION.md`](../../docs/OPERACION.md).
 
 ## API
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | /health | Health check |
-| GET | /consoles | Lista de consolas (con launch_year) |
-| POST | /auth/login | Login admin |
-| GET | /games | Listar juegos (paginado, filtros) |
-| POST | /games | Agregar juego |
-| PUT | /games/:id | Actualizar juego |
-| DELETE | /games/:id | Eliminar juego |
-| POST | /search | Buscar en catálogo (local + IGDB) |
+JWT = requiere sesión (`Authorization: Bearer …`). Detalle de cada endpoint: [`docs/api-rest/AGENTS.md`](docs/api-rest/AGENTS.md).
+
+| Método | Ruta | Sesión | Descripción |
+|--------|------|--------|-------------|
+| GET | /health, /version | — | Estado y versión |
+| POST | /auth/login | — | Login admin |
+| GET / POST | /consoles | — / JWT | Consolas (con `launch_year`) |
+| GET | /games, /games/:id | — | Listar (paginado, filtros) y ver juegos |
+| POST / PUT / DELETE | /games, /games/:id | JWT | Agregar, editar y borrar juegos |
+| PUT | /games/:id/igdb | JWT | Elegir el juego de IGDB de un juego ambiguo |
+| POST | /search | — | Buscar en el catálogo local |
+| POST | /search/online | JWT | Buscar en IGDB en vivo |
+| GET / POST / PUT / DELETE | /wishlist… | JWT | Próximos juegos (listar, agregar, reordenar, borrar) |
+| GET | /stats | JWT | Estadísticas |
+| GET / POST | /export, /import | JWT | Exportar e importar los datos |
+| GET | /covers/random | — | Portadas para los paneles laterales |
+| GET | /sagas, /sagas/:id | — | Sagas y detalle de una saga |
+| GET | /sagas/games/:igdbId/suggest | — | Dónde jugar un juego faltante |
+| GET | /sagas/unresolved | JWT | Juegos sin identificar |
+| POST | /sagas/:id/refresh | JWT | Actualizar una saga desde IGDB |
+| PUT / DELETE | /sagas/games/:igdbId/archive | JWT | Archivar y restaurar un juego de una saga |
+| PUT / DELETE | /sagas/:id/links, /sagas/:id/links/:mainId | JWT | Unir y separar versiones de un juego |
 
 ## Consolas
 

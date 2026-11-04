@@ -1,47 +1,29 @@
 # Games Tracker Frontend
 
-Frontend web para **Games Tracker** — aplicación personal para tracking de videojuegos jugados.
+Frontend web de **Games Tracker**: registro personal de videojuegos jugados. Es el workspace `games-tracker` del monorepo.
 
 ## Stack
 
-- **React** (Create React App)
-- **React Router** — navegación
-- **Context API** — estado global
-- **Docker + Nginx** — producción
-
-## Requisitos
-
-- Node.js 18+
-- npm
-- Backend corriendo en `http://localhost:4000`
-
-## Instalación
-
-```bash
-npm install
-```
+- **React 19** con **Vite 8** (sin router: las pestañas las maneja `App.jsx`)
+- **Vitest** + Testing Library para los tests
+- **Docker + nginx** en QA y Prod (nginx sirve el build y hace de proxy de `/api` al backend)
 
 ## Desarrollo
 
-```bash
-npm start
-```
-
-Abre [http://localhost:3000](http://localhost:3000).
-
-La URL del backend se configura vía `REACT_APP_API_URL` en `.env` (por defecto `http://localhost:4000`).
-
-## Producción
+Desde la raíz del monorepo:
 
 ```bash
-npm run build
+npm install
+npm run dev               # API :4000 + front :3000
+npm test -w games-tracker # tests del front
+npm run build             # build de producción (apps/frontend/dist)
 ```
 
-Genera los archivos estáticos en `build/`.
+La URL del backend se configura con `VITE_API_URL` (por defecto `http://localhost:4000`).
 
 ### Docker
 
-La imagen se construye desde la raíz del monorepo y llama a la API por `/api` (su nginx hace de proxy al backend):
+La imagen se construye desde la raíz del monorepo y llama a la API por `/api`:
 
 ```bash
 docker build -f apps/frontend/Dockerfile -t ghcr.io/ferrazp/games-tracker-frontend:local .
@@ -53,15 +35,21 @@ Para levantarla junto al backend y Postgres, ver [`docs/OPERACION.md`](../../doc
 
 ```
 src/
-├── components/
-│   ├── GameForm.js     # Formulario para agregar/editar juegos
-│   ├── GameList.js     # Listado de juegos registrados
-│   └── Login.js        # Pantalla de login
-├── config.js           # Configuración de API
-├── App.js              # Componente principal
-└── index.js            # Entry point
+├── App.jsx                 # Pestañas (juegos, próximos, sagas), sesión y paneles laterales
+├── api.js                  # apiFetch: maneja la sesión vencida
+├── config.js               # URL de la API y versión
+└── components/
+    ├── GameForm.jsx        # Agregar y editar juegos (búsqueda en catálogo e IGDB)
+    ├── GameList.jsx        # Juegos registrados con filtros
+    ├── Wishlist.jsx        # Próximos juegos, reordenables
+    ├── SidePanels.jsx      # Portadas de los costados (de las sagas cuando se está en Sagas)
+    ├── Login.jsx  VersionBadge.jsx  ConsoleImage.jsx
+    └── sagas/
+        ├── Sagas.jsx           # Lista de sagas con su avance
+        ├── SagaDetail.jsx      # Grilla por año: jugados a color, faltantes en gris, menú ⋯ (archivar)
+        ├── SuggestPanel.jsx    # Dónde jugar un juego faltante
+        ├── LinkPanel.jsx       # Unir versiones de un juego (⭐ principal) y separarlas
+        └── UnresolvedGames.jsx # Elegir el juego correcto cuando IGDB es ambiguo
 ```
 
-## Licencia
-
-MIT
+Cada componente tiene su `*.test.jsx` al lado. Endpoints que usa cada uno: [`AGENTS.md`](AGENTS.md).

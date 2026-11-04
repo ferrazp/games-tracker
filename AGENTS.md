@@ -8,7 +8,7 @@ Registro personal de videojuegos jugados. Un solo repo (`ferrazp/games-tracker`)
 games-tracker/                 F:\projects\developments\games-tracker
 ├── apps/
 │   ├── backend/               Express 5 + SQLite/Postgres (workspace "games-backend") — ver apps/backend/AGENTS.md
-│   └── frontend/              React 19 + Vite 7 (workspace "games-tracker") — ver apps/frontend/AGENTS.md
+│   └── frontend/              React 19 + Vite 8 (workspace "games-tracker") — ver apps/frontend/AGENTS.md
 ├── deploy/
 │   ├── compose.yaml           base de QA y Prod (+ compose.qa.yaml / compose.prod.yaml)
 │   ├── qa.env.example         → deploy/qa.env   (no se commitea)

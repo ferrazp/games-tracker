@@ -1,6 +1,6 @@
 # 🎮 Games Tracker
 
-Registro personal de los videojuegos que jugué en mi vida: qué jugué, en qué consola, cuándo lo empecé y terminé, cuántas horas le dediqué, y una lista de deseos. Con un catálogo precargado desde IGDB (+7800 juegos) para buscar y agregar rápido.
+Registro personal de los videojuegos que jugué en mi vida: qué jugué, en qué consola, cuándo lo empecé y terminé, cuántas horas le dediqué, y una lista de deseos. Con un catálogo precargado desde IGDB (+7800 juegos) para buscar y agregar rápido, y una sección **Sagas** que agrupa lo jugado por serie (Final Fantasy, Super Mario…), muestra qué juegos faltan y dónde jugarlos, y permite archivar los que no interesan o unir versiones que cuentan como el mismo juego.
 
 [![CI](https://github.com/ferrazp/games-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/ferrazp/games-tracker/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ferrazp/games-tracker)](https://github.com/ferrazp/games-tracker/releases)
@@ -10,7 +10,7 @@ Registro personal de los videojuegos que jugué en mi vida: qué jugué, en qué
 | | |
 |---|---|
 | [`apps/backend`](apps/backend) | API REST — Node 26, Express 5, PostgreSQL 17 (SQLite en desarrollo), JWT, IGDB/Twitch |
-| [`apps/frontend`](apps/frontend) | Web — React 19 + Vite 7 |
+| [`apps/frontend`](apps/frontend) | Web — React 19 + Vite 8 |
 | [`deploy`](deploy) | Docker Compose de QA y Producción y scripts de operación (deploy, backup, restore, rollback) |
 | [`docs`](docs) | [Operación](docs/OPERACION.md), diseño y planes |
 

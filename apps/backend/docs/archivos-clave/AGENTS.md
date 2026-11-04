@@ -1,21 +1,18 @@
-> ⚠️ **Obsoleto desde v1.5.0.** Los `docker-compose*.yml` y `nginx.prod.conf` de este backend se eliminaron. QA y Prod se levantan con `deploy/compose.yaml` y los scripts del monorepo: ver [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
-
 ## 📚 Archivos Clave
 
 | Archivo | Propósito |
 |---------|----------|
-| **server-unified.js** | 🚀 Servidor principal (dual DB) |
-| **db/database.js** | 🔌 Driver unificado SQLite/PostgreSQL |
-| **db/migrate.js** | 🗄️ Runner de migraciones SQL |
-| **scripts/seed-catalog.js** | 🎮 Pobla `game_catalog` desde IGDB |
-| **scripts/seed-console-images.js** | 🖼️ Seed imágenes de consolas |
-| **init.sql** | 📋 Schema PostgreSQL + seed data |
-| **package.json** | 📦 Dependencias y scripts |
-| **.env** | 🔐 Variables de entorno |
-| **docker-compose.yml** | 🐳 Base (postgres + backend + frontend) |
-| **docker-compose.dev.yml** | 🧪 Override desarrollo Docker |
-| **docker-compose.prod.yml** | 🚀 Override producción Docker |
-| **nginx.prod.conf** | 🌐 Nginx config para frontend prod |
-| **AGENTS.md** | 📖 Índice de documentación modular |
-| **DOCKER.md** | 🐳 Guía Docker detallada |
-| **README.md** | 📄 README principal |
+| `server-unified.js` | 🚀 Arranque: Express, middlewares, rutas y jobs de sagas (10 s después de arrancar y cada 24 h) |
+| `db/database.js` | 🔌 Driver SQLite/PostgreSQL; `initialize()` crea y actualiza el esquema en cada arranque |
+| `src/routes/*.js` | 🌐 Endpoints de la API (ver [API REST](../api-rest/AGENTS.md)) |
+| `src/routes/sagas.js` | 🎮 Sagas: lectura, refresco, archivo, versiones unidas y juegos sin identificar |
+| `src/services/sagas-logic.js` | 🧠 Lógica pura de sagas: original de cada versión, estados, detalle y sugerencias |
+| `src/services/sagas-sync.js` | 🔄 Jobs de sagas: completar IDs de IGDB, resolver originales, refrescar sagas |
+| `src/services/igdb-client.js` | 📡 Cliente IGDB por lotes para los jobs |
+| `src/services/twitch.js` | 🔑 Token de Twitch para IGDB |
+| `migrations/*.sql` | 📋 Documentación del esquema por etapas (el real está en `database.js`) |
+| `scripts/seed-catalog.js` | 🎮 Pobla `game_catalog` desde IGDB |
+| `scripts/seed-console-images.js` | 🖼️ Imágenes de consolas |
+| `Dockerfile` | 🐳 Imagen del backend (GHCR) |
+| `../../deploy/compose.yaml` | 🐳 QA y Prod (con `compose.qa.yaml` / `compose.prod.yaml`) |
+| `../../docs/OPERACION.md` | 🚢 Deploy, backup, restore, rollback y jobs de sagas |
