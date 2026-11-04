@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/ferrazp/games-tracker/compare/v1.9.0...v1.9.1) (2026-11-04)
+
+
+### Correcciones
+
+* **backend:** follow longer IGDB version chains to reach the original game ([#38](https://github.com/ferrazp/games-tracker/issues/38)) ([149db49](https://github.com/ferrazp/games-tracker/commit/149db49617168c564fc8163e6cf9cb0dd14f24f6))
+
 ## [1.9.0](https://github.com/ferrazp/games-tracker/compare/v1.8.0...v1.9.0) (2026-11-04)
 
 
