@@ -68,6 +68,7 @@ router.get('/stats', requireJWT, async (req, res) => {
 const GAME_FIELDS = [
   'year_played', 'month_played', 'year_completed', 'month_completed',
   'hours_played', 'release_year', 'completed', 'image',
+  'igdb_id', 'igdb_match',
 ];
 
 const placeholders = (n) => Array.from({ length: n }, (_, i) => (DB_TYPE === 'sqlite' ? '?' : `$${i + 1}`)).join(', ');
@@ -85,6 +86,8 @@ function gameValues(g) {
     release_year: toInt(g.release_year),
     completed: g.completed === true || g.completed === 1 || g.completed === 'true',
     image: g.image || null,
+    igdb_id: toInt(g.igdb_id),
+    igdb_match: g.igdb_match || null,
   };
 }
 

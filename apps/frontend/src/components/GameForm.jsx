@@ -26,7 +26,8 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
     completedAt: null,
     hoursPlayed: '',
     image: '',
-    releaseYear: ''
+    releaseYear: '',
+    igdbId: null
   });
   const [consoles, setConsoles] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -113,7 +114,7 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
 
   const handleTitleChange = (e) => {
     const value = e.target.value;
-    setGame(prev => ({ ...prev, title: value }));
+    setGame(prev => ({ ...prev, title: value, igdbId: null }));
     if (titleLocked) setTitleLocked(false);
 
     if (value.length > 0) {
@@ -212,7 +213,8 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
       title: selectedGame.name,
       consoleId,
       image,
-      releaseYear
+      releaseYear,
+      igdbId: selectedGame.id ?? null
     }));
     setTitleLocked(true);
     setSearchResults([]);
@@ -288,7 +290,8 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
           hours_played: game.hoursPlayed !== '' ? parseFloat(game.hoursPlayed) : null,
           completed: game.completed,
           image: game.image,
-          release_year: game.releaseYear !== '' ? parseInt(game.releaseYear, 10) : null
+          release_year: game.releaseYear !== '' ? parseInt(game.releaseYear, 10) : null,
+          igdb_id: game.igdbId
         }),
       });
 
@@ -304,7 +307,8 @@ function GameForm({ onGameAdded, getHeaders, onConsoleSelect }) {
         completedAt: null,
         hoursPlayed: '',
         image: '',
-        releaseYear: ''
+        releaseYear: '',
+        igdbId: null
       });
       setTitleLocked(false);
       onGameAdded();

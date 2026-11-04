@@ -147,6 +147,44 @@ it('submits successfully and calls onGameAdded', async () => {
   expect(onGameAdded).toHaveBeenCalled();
 });
 
+it('sends the igdb_id of the selected game when registering it', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  await completeGameSelection(user, vi.fn());
+
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ game: { id: 1 } }) });
+
+  await user.click(await screen.findByRole('button', { name: /^Agregar juego$/ }));
+  await vi.advanceTimersByTimeAsync(100);
+
+  await waitFor(() => {
+    const post = global.fetch.mock.calls.find(([url, opts]) => url.endsWith('/games') && opts?.method === 'POST');
+    expect(post).toBeTruthy();
+    expect(JSON.parse(post[1].body).igdb_id).toBe(1);
+  });
+});
+
+it('does not keep the igdb_id of a previously selected game after editing the title', async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  await completeGameSelection(user, vi.fn());
+
+  // Edita el título (destraba) y vuelve a elegir un resultado sin id.
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{ name: 'Otro Juego' }] }) });
+  const titleInput = screen.getByPlaceholderText('Buscá un juego del catálogo...');
+  await user.type(titleInput, 'x');
+  await vi.advanceTimersByTimeAsync(500);
+  await user.click(await screen.findByText('Otro Juego'));
+
+  global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ game: { id: 2 } }) });
+  await user.click(await screen.findByRole('button', { name: /^Agregar juego$/ }));
+  await vi.advanceTimersByTimeAsync(100);
+
+  await waitFor(() => {
+    const post = global.fetch.mock.calls.find(([url, opts]) => url.endsWith('/games') && opts?.method === 'POST');
+    expect(post).toBeTruthy();
+    expect(JSON.parse(post[1].body).igdb_id ?? null).toBeNull();
+  });
+});
+
 it('shows error feedback on failed submit', async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   await completeGameSelection(user, vi.fn());

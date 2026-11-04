@@ -1,0 +1,99 @@
+import React, { useState, useEffect, useRef } from 'react';
+import API_URL from '../../config';
+import { apiFetch, isSessionExpired } from '../../api';
+
+const candidateLabel = (c) => {
+  const year = c.year ? ` (${c.year})` : '';
+  const platforms = c.platforms && c.platforms.length > 0 ? ` · ${c.platforms.join(', ')}` : '';
+  return `${c.name}${year}${platforms}`;
+};
+
+function UnresolvedGames({ getHeaders, onDone }) {
+  const [games, setGames] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [saving, setSaving] = useState({});
+  const resolvedAny = useRef(false);
+  const [rowErrors, setRowErrors] = useState({});
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await apiFetch(`${API_URL}/sagas/unresolved`, { headers: getHeaders() });
+        if (!response.ok) throw new Error('Error al cargar los juegos sin identificar');
+        const json = await response.json();
+        if (active) setGames(Array.isArray(json) ? json : []);
+      } catch (err) {
+        if (isSessionExpired(err) || !active) return;
+        setLoadError(err.message);
+      }
+    })();
+    return () => { active = false; };
+  }, [getHeaders]);
+
+  // Cuando se resolvió al menos uno y la lista queda vacía, se termina la revisión.
+  useEffect(() => {
+    if (resolvedAny.current && games && games.length === 0) onDone();
+  }, [games]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resolve = async (game, igdbId) => {
+    setSaving((prev) => ({ ...prev, [game.id]: true }));
+    setRowErrors((prev) => ({ ...prev, [game.id]: null }));
+    try {
+      const response = await apiFetch(`${API_URL}/games/${game.id}/igdb`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ igdb_id: igdbId }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'No se pudo guardar');
+      }
+      resolvedAny.current = true;
+      setGames((prev) => prev.filter((g) => g.id !== game.id));
+    } catch (err) {
+      if (isSessionExpired(err)) return;
+      setRowErrors((prev) => ({ ...prev, [game.id]: err.message }));
+    } finally {
+      setSaving((prev) => ({ ...prev, [game.id]: false }));
+    }
+  };
+
+  return (
+    <div className="saga-unresolved">
+      <button type="button" className="btn btn-secondary" onClick={onDone}>Volver</button>
+
+      {games === null && !loadError && <p className="status-message">Cargando...</p>}
+      {loadError && <p className="wishlist-error">Error: {loadError}</p>}
+      {games && games.length === 0 && (
+        <p className="status-message empty">No hay juegos sin identificar.</p>
+      )}
+
+      {games && games.map((game) => {
+        const busy = Boolean(saving[game.id]);
+        return (
+          <div key={game.id} className="saga-unresolved-game">
+            <h3>{game.title}</h3>
+            <span className="saga-unresolved-console">{game.console_name}</span>
+            <div className="saga-unresolved-candidates">
+              {game.candidates.map((c) => (
+                <button key={c.igdb_id} type="button" className="saga-candidate" disabled={busy}
+                  onClick={() => resolve(game, c.igdb_id)}>
+                  {c.cover_url && <img src={c.cover_url} alt="" loading="lazy" />}
+                  <span>{candidateLabel(c)}</span>
+                </button>
+              ))}
+              <button type="button" className="btn btn-secondary" disabled={busy}
+                onClick={() => resolve(game, null)}>
+                No es de ninguna saga
+              </button>
+            </div>
+            {rowErrors[game.id] && <p className="saga-unresolved-error">{rowErrors[game.id]}</p>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default UnresolvedGames;

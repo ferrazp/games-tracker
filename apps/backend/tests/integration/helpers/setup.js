@@ -8,6 +8,10 @@ const dbPath = join(tmpDir, 'test.db');
 
 process.env.SQLITE_PATH = dbPath;
 process.env.NODE_ENV = 'test';
+// Un .env local puede traer credenciales de Twitch: vacías (dotenv no pisa lo ya definido)
+// para que ningún test llegue a IGDB real.
+process.env.TWITCH_CLIENT_ID = '';
+process.env.TWITCH_CLIENT_SECRET = '';
 
 const { app } = await import('../../../server-unified.js');
 const { initializeDatabase, getDatabase } = await import('../../../db/database.js');

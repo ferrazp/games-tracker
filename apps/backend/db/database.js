@@ -82,6 +82,27 @@ class SQLiteClient {
       );
       CREATE INDEX IF NOT EXISTS idx_wishlist_sort_order ON game_wishlist(sort_order);
       CREATE INDEX IF NOT EXISTS idx_wishlist_catalog_id ON game_wishlist(game_catalog_id);
+      CREATE TABLE IF NOT EXISTS igdb_resolution (
+        igdb_id INTEGER PRIMARY KEY,
+        canonical_igdb_id INTEGER NOT NULL,
+        saga_id INTEGER,
+        resolved_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS sagas (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        refreshed_at DATETIME
+      );
+      CREATE TABLE IF NOT EXISTS saga_games (
+        igdb_id INTEGER PRIMARY KEY,
+        saga_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        release_year INTEGER,
+        game_type INTEGER,
+        cover_url TEXT,
+        versions TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_saga_games_saga_id ON saga_games(saga_id);
     `;
 
     await new Promise((resolve, reject) => {
@@ -126,6 +147,12 @@ class SQLiteClient {
         resolve();
       });
     });
+
+    for (const col of ['igdb_id INTEGER', 'igdb_match TEXT', 'igdb_candidates TEXT']) {
+      await new Promise((resolve) => {
+        this.db.run(`ALTER TABLE games ADD COLUMN ${col}`, () => resolve());
+      });
+    }
 
     await new Promise((resolve) => {
       this.db.run("ALTER TABLE consoles ADD COLUMN image TEXT", (err) => {
@@ -333,6 +360,38 @@ class PostgreSQLClient {
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS hours_played NUMERIC(8,1)`);
       await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS release_year INTEGER`);
 
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS igdb_id INTEGER`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS igdb_match TEXT`);
+      await this.pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS igdb_candidates TEXT`);
+
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS igdb_resolution (
+          igdb_id INTEGER PRIMARY KEY,
+          canonical_igdb_id INTEGER NOT NULL,
+          saga_id INTEGER,
+          resolved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS sagas (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          refreshed_at TIMESTAMP
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS saga_games (
+          igdb_id INTEGER PRIMARY KEY,
+          saga_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          release_year INTEGER,
+          game_type INTEGER,
+          cover_url TEXT,
+          versions TEXT
+        )
+      `);
+      await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_saga_games_saga_id ON saga_games(saga_id)`);
+
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image TEXT`);
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image_type VARCHAR(20) DEFAULT 'bitmap'`);
 
@@ -347,7 +406,8 @@ class PostgreSQLClient {
             g.completed, g.image,
             c.name as console_name, c.id as console_id,
             g.created_at, g.updated_at,
-            g.release_year
+            g.release_year,
+            g.igdb_id, g.igdb_match
         FROM games g
         LEFT JOIN consoles c ON g.console_id = c.id
         ORDER BY g.created_at DESC
@@ -387,7 +447,8 @@ class PostgreSQLClient {
             g.completed, g.image,
             c.name as console_name, c.id as console_id,
             g.created_at, g.updated_at,
-            g.release_year
+            g.release_year,
+            g.igdb_id, g.igdb_match
         FROM games g
         LEFT JOIN consoles c ON g.console_id = c.id
         ORDER BY g.created_at DESC
