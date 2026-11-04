@@ -403,10 +403,12 @@ Datos cacheados de IGDB (los arma el job de sagas; ver [OPERACION.md](../../../.
 | Endpoint | Método | Auth | Qué hace |
 |---|---|---|---|
 | `/sagas` | GET | — | `{ configured, unresolved_count, sagas: [{ id, name, counts, covers }], side_covers }` (`side_covers`: hasta 16 portadas de las sagas, alternando entre ellas, primero las de juegos registrados) |
-| `/sagas/:id` | GET | — | Detalle: `counts` y `groups` por año con el estado de cada juego (`completed`, `pending`, `missing`), y `archived` (juegos archivados, por nombre); 404 si no hay juegos registrados de esa saga |
+| `/sagas/:id` | GET | — | Detalle: `counts` y `groups` por año con el estado de cada juego (`completed`, `pending`, `missing`), y `archived` (juegos archivados, por nombre); cada juego trae `registered` y `link`; 404 si no hay juegos registrados de esa saga |
 | `/sagas/:id/refresh` | POST | JWT | Vuelve a pedir la saga a IGDB y devuelve el detalle; 503 sin credenciales, 502 si falla IGDB |
 | `/sagas/games/:igdbId/archive` | PUT | JWT | Archiva el juego: sale de la grilla y de los totales hasta restaurarlo (el refresco de IGDB no lo deshace). Devuelve el detalle de su saga; 404 si no está en ninguna |
 | `/sagas/games/:igdbId/archive` | DELETE | JWT | Restaura un juego archivado y devuelve el detalle de su saga |
+| `/sagas/:id/links` | PUT | JWT | Une versiones de un juego: `{ "main_igdb_id": 393, "igdb_ids": [77234] }`, todas de la saga. Toman el estado más avanzado de lo registrado del grupo (cuentan como jugadas) y cada juego trae `link: { main_igdb_id, main_name, main_year, is_main }`; reemplaza los grupos que ya tuvieran esos juegos. 400 si el cuerpo es inválido o hay juegos de otra saga |
+| `/sagas/:id/links/:mainId` | DELETE | JWT | Separa el grupo de ese juego principal y devuelve el detalle |
 | `/sagas/games/:igdbId/suggest` | GET | — | Versiones (plataformas con año), versión sugerida y links de búsqueda |
 | `/sagas/unresolved` | GET | JWT | Juegos con `igdb_match = 'unresolved'` y sus candidatos |
 | `/games/:id/igdb` | PUT | JWT | Body `{ "igdb_id": 427 }` (entero positivo o string de dígitos) → `manual`; `{ "igdb_id": null }` → `none` (fuera de las sagas) |

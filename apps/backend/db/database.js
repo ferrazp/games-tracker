@@ -107,6 +107,10 @@ class SQLiteClient {
         igdb_id INTEGER PRIMARY KEY,
         archived_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS saga_links (
+        igdb_id INTEGER PRIMARY KEY,
+        main_igdb_id INTEGER NOT NULL
+      );
     `;
 
     await new Promise((resolve, reject) => {
@@ -399,6 +403,12 @@ class PostgreSQLClient {
         CREATE TABLE IF NOT EXISTS saga_archived (
           igdb_id INTEGER PRIMARY KEY,
           archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS saga_links (
+          igdb_id INTEGER PRIMARY KEY,
+          main_igdb_id INTEGER NOT NULL
         )
       `);
 

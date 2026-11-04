@@ -74,6 +74,12 @@ async function loadSagaGames(db, sagaId, { archived = false } = {}) {
   return rows.map((r) => ({ ...r, igdb_id: Number(r.igdb_id) }));
 }
 
+// Versiones unidas por el usuario: [{ igdb_id, main_igdb_id }].
+async function loadLinks(db) {
+  const { rows } = await db.query('SELECT igdb_id, main_igdb_id FROM saga_links');
+  return rows.map((r) => ({ igdb_id: Number(r.igdb_id), main_igdb_id: Number(r.main_igdb_id) }));
+}
+
 async function sagaDetail(db, sagaId) {
   const { rows } = await db.query(sql(db, 'SELECT id, name FROM sagas WHERE id = ?'), [sagaId]);
   if (rows.length === 0) return null;
@@ -87,7 +93,8 @@ async function sagaDetail(db, sagaId) {
     release_year: g.release_year ?? null,
     cover_url: g.cover_url ?? null,
   }));
-  return { ...buildSagaDetail(saga, await loadSagaGames(db, sagaId), status), archived };
+  const detail = buildSagaDetail(saga, await loadSagaGames(db, sagaId), status, await loadLinks(db));
+  return { ...detail, archived };
 }
 
 // Saga del juego en el caché, o null si no está en ninguna.
@@ -148,6 +155,7 @@ router.get('/sagas', async (req, res) => {
     }
 
     const status = await getStatusByCanonical(db);
+    const links = await loadLinks(db);
     const { rows: sagaRows } = await db.query('SELECT id, name FROM sagas');
     const sagas = [];
     const coversBySaga = new Map();
@@ -156,7 +164,7 @@ router.get('/sagas', async (req, res) => {
       const mine = canonicalBySaga.get(id);
       if (!mine) continue;
       const games = await loadSagaGames(db, id);
-      const { counts } = buildSagaDetail({ id, name: row.name }, games, status);
+      const { counts } = buildSagaDetail({ id, name: row.name }, games, status, links);
       const covers = games
         .filter((g) => mine.has(g.igdb_id) && g.cover_url)
         .slice(0, MAX_COVERS)
@@ -249,6 +257,77 @@ router.get('/sagas/games/:igdbId/suggest', async (req, res) => {
 
 router.put('/sagas/games/:igdbId/archive', sessionLimiter, requireJWT, (req, res) => setArchived(req, res, true));
 router.delete('/sagas/games/:igdbId/archive', sessionLimiter, requireJWT, (req, res) => setArchived(req, res, false));
+
+// Une versiones de un mismo juego: { main_igdb_id, igdb_ids: [otras versiones] }, todas de la
+// saga. Reemplaza los grupos que ya tuvieran alguno de esos juegos (los que quedan con un
+// solo juego desaparecen). Responde el detalle de la saga.
+router.put('/sagas/:id/links', sessionLimiter, requireJWT, async (req, res) => {
+  try {
+    const sagaId = parseId(req.params.id);
+    const db = getDatabase();
+    const { rows: sagaRows } = sagaId
+      ? await db.query(sql(db, 'SELECT id FROM sagas WHERE id = ?'), [sagaId])
+      : { rows: [] };
+    if (sagaRows.length === 0) return res.status(404).json({ error: 'Saga no encontrada' });
+
+    const main = parseIgdbId(req.body?.main_igdb_id);
+    const raw = req.body?.igdb_ids;
+    const others = Array.isArray(raw) ? raw.map(parseIgdbId) : [];
+    const ids = [main, ...others];
+    const valid = main !== null && others.length > 0 && !others.includes(null)
+      && new Set(ids).size === ids.length;
+    if (!valid) {
+      return res.status(400).json({ error: 'Elegí el juego principal y al menos otra versión distinta' });
+    }
+    const placeholders = ids.map(() => '?').join(', ');
+    const { rows: inSaga } = await db.query(
+      sql(db, `SELECT igdb_id FROM saga_games WHERE saga_id = ? AND igdb_id IN (${placeholders})`),
+      [sagaId, ...ids]
+    );
+    if (inSaga.length !== ids.length) {
+      return res.status(400).json({ error: 'Todas las versiones tienen que ser de esta saga' });
+    }
+
+    await db.transaction(async (tx) => {
+      const { rows: touched } = await tx.query(
+        sql(db, `SELECT DISTINCT main_igdb_id FROM saga_links WHERE igdb_id IN (${placeholders})`),
+        ids
+      );
+      const oldMains = touched.map((r) => Number(r.main_igdb_id));
+      if (oldMains.length) {
+        await tx.query(
+          sql(db, `DELETE FROM saga_links WHERE main_igdb_id IN (${oldMains.map(() => '?').join(', ')})`),
+          oldMains
+        );
+      }
+      for (const id of ids) {
+        await tx.query(sql(db, 'INSERT INTO saga_links (igdb_id, main_igdb_id) VALUES (?, ?)'), [id, main]);
+      }
+    });
+
+    res.json(await sagaDetail(db, sagaId) ?? { error: 'Saga no encontrada' });
+  } catch (error) {
+    logger.error({ err: error }, 'Error linking saga versions');
+    res.status(500).json({ error: 'No se pudieron unir las versiones' });
+  }
+});
+
+// Separa un grupo de versiones unidas (identificado por su juego principal).
+router.delete('/sagas/:id/links/:mainId', sessionLimiter, requireJWT, async (req, res) => {
+  try {
+    const sagaId = parseId(req.params.id);
+    const mainId = parseId(req.params.mainId);
+    const db = getDatabase();
+    if (!sagaId || !mainId) return res.status(404).json({ error: 'Saga no encontrada' });
+    await db.query(sql(db, 'DELETE FROM saga_links WHERE main_igdb_id = ?'), [mainId]);
+    const detail = await sagaDetail(db, sagaId);
+    if (!detail) return res.status(404).json({ error: 'Saga no encontrada' });
+    res.json(detail);
+  } catch (error) {
+    logger.error({ err: error }, 'Error unlinking saga versions');
+    res.status(500).json({ error: 'No se pudieron separar las versiones' });
+  }
+});
 
 router.get('/sagas/:id', async (req, res) => {
   try {

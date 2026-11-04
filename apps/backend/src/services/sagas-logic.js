@@ -59,20 +59,51 @@ export function releaseYear(unixSeconds) {
   return new Date(unixSeconds * 1000).getUTCFullYear();
 }
 
-export function buildSagaDetail(saga, sagaGames, statusByCanonical) {
+// Estado efectivo con las versiones unidas por el usuario: cada miembro de un grupo toma
+// el estado más avanzado de los juegos registrados del grupo (si ninguno lo está, falta).
+// links: [{ igdb_id, main_igdb_id }], el principal también figura con su propio id.
+export function linkedStatus(statusByCanonical, links = []) {
+  const members = new Map();
+  for (const { igdb_id: id, main_igdb_id: main } of links) {
+    if (!members.has(main)) members.set(main, []);
+    members.get(main).push(id);
+  }
+  const status = new Map(statusByCanonical);
+  for (const ids of members.values()) {
+    const own = ids.map((id) => statusByCanonical.get(id)).filter(Boolean);
+    if (own.length === 0) continue;
+    const merged = own.reduce(mergeStatus);
+    for (const id of ids) status.set(id, merged);
+  }
+  return status;
+}
+
+export function buildSagaDetail(saga, sagaGames, statusByCanonical, links = []) {
+  const status = linkedStatus(statusByCanonical, links);
+  const mainOf = new Map(links.map((l) => [l.igdb_id, l.main_igdb_id]));
+  const byId = new Map(sagaGames.map((g) => [g.igdb_id, g]));
   const counts = { completed: 0, pending: 0, missing: 0, total: sagaGames.length };
   const byYear = new Map();
   for (const g of sagaGames) {
-    const status = statusByCanonical.get(g.igdb_id) ?? 'missing';
-    counts[status] += 1;
+    const gameStatus = status.get(g.igdb_id) ?? 'missing';
+    counts[gameStatus] += 1;
     const year = g.release_year ?? null;
+    const main = mainOf.get(g.igdb_id);
+    const mainGame = main != null ? byId.get(main) : null;
     if (!byYear.has(year)) byYear.set(year, []);
     byYear.get(year).push({
       igdb_id: g.igdb_id,
       name: g.name,
       release_year: year,
       cover_url: g.cover_url ?? null,
-      status,
+      status: gameStatus,
+      registered: statusByCanonical.has(g.igdb_id),
+      link: main == null ? null : {
+        main_igdb_id: main,
+        main_name: mainGame?.name ?? null,
+        main_year: mainGame?.release_year ?? null,
+        is_main: main === g.igdb_id,
+      },
     });
   }
   const groups = [...byYear.entries()]
