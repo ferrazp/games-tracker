@@ -78,15 +78,18 @@ describe('sagas-logic', () => {
     it('sin padre y sin ser principal ni remake → null', () => {
       assert.deepEqual(climbToCanonical({ id: 3, game_type: 3 }, byId), { canonical: null });
     });
-    it('corta después de 3 saltos', () => {
+    it('corta después de 6 saltos', () => {
       const chain = new Map([
         [1, { id: 1, game_type: 1, parent_game: 2 }],
         [2, { id: 2, game_type: 1, parent_game: 3 }],
         [3, { id: 3, game_type: 1, parent_game: 4 }],
         [4, { id: 4, game_type: 1, parent_game: 5 }],
-        [5, { id: 5, game_type: 0 }],
+        [5, { id: 5, game_type: 1, parent_game: 6 }],
+        [6, { id: 6, game_type: 1, parent_game: 7 }],
+        [7, { id: 7, game_type: 1, parent_game: 8 }],
+        [8, { id: 8, game_type: 0 }],
       ]);
-      assert.deepEqual(climbToCanonical(chain.get(2), chain), { canonical: chain.get(5) });
+      assert.deepEqual(climbToCanonical(chain.get(2), chain), { canonical: chain.get(8) });
       assert.deepEqual(climbToCanonical(chain.get(1), chain), { canonical: null });
     });
 

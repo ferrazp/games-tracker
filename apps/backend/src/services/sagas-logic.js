@@ -34,7 +34,7 @@ export function canonicalId(game) {
 // Sube por version_parent / parent_game hasta un juego canónico (ver isCanonicalGame).
 // Devuelve { canonical } (null si no se llega en maxHops o no hay padre) o
 // { missing: id } si hace falta pedir a IGDB un padre que no está en byId.
-export function climbToCanonical(game, byId, maxHops = 3) {
+export function climbToCanonical(game, byId, maxHops = 6) {
   let current = game;
   for (let hops = 0; ; hops += 1) {
     if (isCanonicalGame(current)) return { canonical: current };

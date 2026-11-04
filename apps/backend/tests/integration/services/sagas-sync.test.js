@@ -253,6 +253,28 @@ describe('syncSagas', () => {
     assert.equal(result.resolved, 1);
   });
 
+  it('Chrono Trigger de PC (2018) sube 4 niveles hasta el original de 1995', async () => {
+    await addGame({ title: 'Chrono Trigger', igdb_id: 206320, igdb_match: 'manual', completed: 1 });
+    const chrono = { id: 345, name: 'Chrono', games: [1802, 1804] };
+    const original = { id: 1802, name: 'Chrono Trigger', game_type: 0, collections: [chrono] };
+    const igdb = fakeIgdb({
+      games: {
+        206320: { id: 206320, name: 'Chrono Trigger', game_type: 9, parent_game: 89828 },
+        89828: { id: 89828, name: 'Chrono Trigger', game_type: 9, parent_game: 20398 },
+        20398: { id: 20398, name: 'Chrono Trigger', game_type: 10, parent_game: 263446 },
+        263446: { id: 263446, name: 'Chrono Trigger', game_type: 10, parent_game: 1802 },
+        1802: original,
+      },
+      members: { 345: [original, { id: 1804, name: 'Chrono Cross', game_type: 0, collections: [chrono] }] },
+    });
+
+    await syncSagas(db, igdb);
+
+    const { rows } = await db.query('SELECT * FROM igdb_resolution WHERE igdb_id = 206320');
+    assert.equal(rows[0].canonical_igdb_id, 1802);
+    assert.equal(rows[0].saga_id, 345);
+  });
+
   it('un bundle sin padres queda unresolved con candidatos y sin resolución', async () => {
     const id = await addGame({ title: 'FF Bundle', console: 'PlayStation 2', igdb_id: 8000, igdb_match: 'selected' });
     const igdb = fakeIgdb({
