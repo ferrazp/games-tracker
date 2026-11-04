@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.0](https://github.com/ferrazp/games-tracker/compare/v1.7.0...v1.8.0) (2026-11-04)
+
+
+### Funcionalidades
+
+* archive and restore games of a saga ([#35](https://github.com/ferrazp/games-tracker/issues/35)) ([b7bb354](https://github.com/ferrazp/games-tracker/commit/b7bb354aa2b37dea7f4a65cf21c13a88c019338a))
+* **backend:** add the sagas API and refresh them daily and after each change ([5d77ef5](https://github.com/ferrazp/games-tracker/commit/5d77ef51ed8094290f761193a7973589fdce7bb3))
+* **backend:** group registered games into sagas using IGDB series ([5d77ef5](https://github.com/ferrazp/games-tracker/commit/5d77ef51ed8094290f761193a7973589fdce7bb3))
+* **backend:** store the IGDB id of each registered game ([5d77ef5](https://github.com/ferrazp/games-tracker/commit/5d77ef51ed8094290f761193a7973589fdce7bb3))
+* **frontend:** add the sagas tab with each saga's missing games and suggestions ([5d77ef5](https://github.com/ferrazp/games-tracker/commit/5d77ef51ed8094290f761193a7973589fdce7bb3))
+* **frontend:** let the user pick the right game when it is ambiguous ([5d77ef5](https://github.com/ferrazp/games-tracker/commit/5d77ef51ed8094290f761193a7973589fdce7bb3))
+
 ## [1.7.0](https://github.com/ferrazp/games-tracker/compare/v1.6.1...v1.7.0) (2026-11-02)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "games-tracker",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "description": "Games Tracker: registro personal de videojuegos (monorepo backend + frontend)",
   "workspaces": [
