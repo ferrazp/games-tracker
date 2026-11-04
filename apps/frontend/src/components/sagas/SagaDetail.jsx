@@ -3,6 +3,7 @@ import API_URL from '../../config';
 import { apiFetch, isSessionExpired } from '../../api';
 import { countsLabel } from './sagasText';
 import SuggestPanel from './SuggestPanel';
+import LinkPanel from './LinkPanel';
 
 const FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -13,25 +14,45 @@ const FILTERS = [
 
 const BADGES = { completed: '✓', pending: '…' };
 
-function Cover({ game, onSuggest, onArchive }) {
+// Un color por grupo de versiones unidas, para ver cuáles van juntas.
+const LINK_COLORS = ['#a29bfe', '#fd79a8', '#00cec9', '#fdcb6e', '#e17055', '#74b9ff', '#55efc4', '#ff7675'];
+
+function coverTitle(game) {
+  const link = game.link;
+  if (!link || link.is_main || !link.main_name) return game.name;
+  const year = link.main_year ? ` (${link.main_year})` : '';
+  return `${game.name} — jugado en otra versión: ${link.main_name}${year}`;
+}
+
+function Cover({ game, color, onSuggest, onLink, onArchive }) {
   const [broken, setBroken] = useState(false);
   const missing = game.status === 'missing';
   const showImage = game.cover_url && !broken;
 
-  const interactive = missing && !onArchive
+  const action = onArchive ? null
+    : missing ? () => onSuggest(game.igdb_id)
+      : onLink ? () => onLink(game.igdb_id)
+        : null;
+  const interactive = action
     ? {
       role: 'button',
       tabIndex: 0,
-      onClick: () => onSuggest(game.igdb_id),
-      onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); onSuggest(game.igdb_id); } },
+      onClick: action,
+      onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); action(); } },
     }
     : {};
 
   return (
-    <div className={`saga-cover ${game.status}${showImage ? '' : ' no-image'}`} title={game.name} {...interactive}>
+    <div className={`saga-cover ${game.status}${game.link ? ' linked' : ''}${showImage ? '' : ' no-image'}`}
+      title={coverTitle(game)} style={color ? { '--link-color': color } : undefined} {...interactive}>
       {showImage && <img src={game.cover_url} alt={game.name} loading="lazy" onError={() => setBroken(true)} />}
       <span className="saga-cover-name">{game.name}</span>
-      {BADGES[game.status] && <span className={`saga-badge ${game.status}`}>{BADGES[game.status]}</span>}
+      {BADGES[game.status] && (
+        <span className={`saga-badge ${game.status}`}>
+          {game.link?.is_main && <span className="saga-main-star" aria-label="principal">⭐</span>}
+          {BADGES[game.status]}
+        </span>
+      )}
       {missing && !onArchive && <span className="saga-cover-search" aria-hidden="true">🔍</span>}
       {missing && !onArchive && <span className="saga-cover-hint">Sugerir</span>}
       {onArchive && (
@@ -59,6 +80,7 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [suggestId, setSuggestId] = useState(null);
+  const [linkId, setLinkId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -167,6 +189,13 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
     .filter((g) => g.games.length > 0);
   const emptyText = groups.length === 0 ? FILTERS.find((f) => f.key === filter)?.empty : null;
   const archived = detail.archived ?? [];
+  const allGames = detail.groups.flatMap((g) => g.games);
+  const linkColors = new Map();
+  for (const game of allGames) {
+    const main = game.link?.main_igdb_id;
+    if (main != null && !linkColors.has(main)) linkColors.set(main, LINK_COLORS[linkColors.size % LINK_COLORS.length]);
+  }
+  const linkGame = linkId !== null ? allGames.find((g) => g.igdb_id === linkId) : null;
 
   return (
     <div className="saga-detail">
@@ -237,13 +266,22 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
           <div className="saga-covers">
             {g.games.map((game) => (
               <Cover key={game.igdb_id} game={game} onSuggest={setSuggestId}
+                color={game.link ? linkColors.get(game.link.main_igdb_id) : null}
+                onLink={isAuthenticated ? setLinkId : null}
                 onArchive={archiving ? (id) => setArchived(id, true) : null} />
             ))}
           </div>
         </section>
       ))}
 
-      {suggestId !== null && <SuggestPanel igdbId={suggestId} onClose={() => setSuggestId(null)} />}
+      {suggestId !== null && (
+        <SuggestPanel igdbId={suggestId} onClose={() => setSuggestId(null)}
+          onLinkOther={isAuthenticated ? () => { setLinkId(suggestId); setSuggestId(null); } : null} />
+      )}
+      {linkGame && (
+        <LinkPanel game={linkGame} detail={detail} getHeaders={getHeaders} onClose={() => setLinkId(null)}
+          onSaved={(json) => { latestLoad.current++; setDetail(json); setLinkId(null); }} />
+      )}
     </div>
   );
 }

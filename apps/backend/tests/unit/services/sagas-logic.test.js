@@ -178,6 +178,51 @@ describe('sagas-logic', () => {
       assert.deepEqual(d.groups[0].games.map((g) => g.name), ['A', 'B']);
       assert.equal(d.counts.pending, 1);
     });
+
+    describe('versiones unidas', () => {
+      const games = [
+        { igdb_id: 77234, name: 'Final Fantasy III', release_year: 1990, cover_url: null },
+        { igdb_id: 393, name: 'Final Fantasy III', release_year: 2006, cover_url: null },
+        { igdb_id: 426, name: 'Final Fantasy III', release_year: 1994, cover_url: null },
+        { igdb_id: 415, name: 'Final Fantasy V', release_year: 1992, cover_url: null },
+      ];
+      const find = (d, id) => d.groups.flatMap((g) => g.games).find((g) => g.igdb_id === id);
+
+      it('sin uniones cada juego trae registered y link nulo', () => {
+        const d = buildSagaDetail({ id: 39, name: 'FF' }, games, new Map([[393, 'completed']]));
+        assert.equal(find(d, 393).registered, true);
+        assert.equal(find(d, 77234).registered, false);
+        assert.equal(find(d, 77234).link, null);
+      });
+
+      it('las versiones unidas toman el estado del grupo y no cuentan como faltantes', () => {
+        const links = [{ igdb_id: 393, main_igdb_id: 393 }, { igdb_id: 77234, main_igdb_id: 393 }];
+        const d = buildSagaDetail({ id: 39, name: 'FF' }, games, new Map([[393, 'completed']]), links);
+        assert.deepEqual(d.counts, { completed: 2, pending: 0, missing: 2, total: 4 });
+        assert.equal(find(d, 77234).status, 'completed');
+        assert.equal(find(d, 77234).registered, false);
+        assert.deepEqual(find(d, 77234).link, { main_igdb_id: 393, main_name: 'Final Fantasy III', main_year: 2006, is_main: false });
+        assert.deepEqual(find(d, 393).link, { main_igdb_id: 393, main_name: 'Final Fantasy III', main_year: 2006, is_main: true });
+        assert.equal(find(d, 426).link, null);
+        assert.equal(find(d, 426).status, 'missing');
+      });
+
+      it('el principal puede no estar registrado y gana el estado más avanzado del grupo', () => {
+        const links = [{ igdb_id: 77234, main_igdb_id: 77234 }, { igdb_id: 393, main_igdb_id: 77234 }, { igdb_id: 415, main_igdb_id: 77234 }];
+        const status = new Map([[393, 'pending'], [415, 'completed']]);
+        const d = buildSagaDetail({ id: 39, name: 'FF' }, games, status, links);
+        assert.equal(find(d, 77234).status, 'completed');
+        assert.equal(find(d, 393).status, 'completed');
+        assert.equal(find(d, 77234).link.is_main, true);
+      });
+
+      it('un grupo sin juegos registrados sigue faltando', () => {
+        const links = [{ igdb_id: 77234, main_igdb_id: 77234 }, { igdb_id: 426, main_igdb_id: 77234 }];
+        const d = buildSagaDetail({ id: 39, name: 'FF' }, games, new Map(), links);
+        assert.equal(find(d, 426).status, 'missing');
+        assert.equal(d.counts.missing, 4);
+      });
+    });
   });
 
   describe('countsLabel', () => {

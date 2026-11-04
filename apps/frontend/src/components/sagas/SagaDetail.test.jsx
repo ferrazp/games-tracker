@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import SagaDetail from './SagaDetail';
@@ -251,5 +251,76 @@ describe('archivar juegos', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
+
+describe('versiones unidas', () => {
+  const link = { main_igdb_id: 1, main_name: 'Tales Uno', main_year: 2020 };
+  const linked = {
+    ...detail,
+    groups: [
+      { year: 2020, games: [
+        { igdb_id: 1, name: 'Tales Uno', release_year: 2020, cover_url: null, status: 'completed', registered: true, link: { ...link, is_main: true } },
+        { igdb_id: 2, name: 'Tales Dos', release_year: 2020, cover_url: null, status: 'pending', registered: true, link: null },
+      ] },
+      { year: null, games: [
+        { igdb_id: 3, name: 'Tales Tres', release_year: null, cover_url: null, status: 'completed', registered: false, link: { ...link, is_main: false } },
+        { igdb_id: 4, name: 'Tales Cuatro', release_year: null, cover_url: null, status: 'missing', registered: false, link: null },
+      ] },
+    ],
+    archived: [],
+  };
+  const cover = (name) => screen.getByText(name).closest('.saga-cover');
+
+  test('las versiones unidas se ven a color, con el mismo borde, y la principal con ⭐', async () => {
+    mockFetch({ 'GET /sagas/39': { body: linked } });
+    renderDetail();
+    await screen.findByText('Tales Tres');
+
+    expect(cover('Tales Tres')).toHaveClass('linked');
+    expect(cover('Tales Tres')).not.toHaveClass('missing');
+    expect(cover('Tales Tres')).toHaveAttribute('title', 'Tales Tres — jugado en otra versión: Tales Uno (2020)');
+    expect(cover('Tales Uno').style.getPropertyValue('--link-color'))
+      .toBe(cover('Tales Tres').style.getPropertyValue('--link-color'));
+    expect(cover('Tales Uno').querySelector('.saga-main-star')).not.toBeNull();
+    expect(cover('Tales Tres').querySelector('.saga-main-star')).toBeNull();
+    expect(cover('Tales Dos')).not.toHaveClass('linked');
+  });
+
+  test('con sesión, tocar un juego jugado abre el panel para unir y al guardar se actualiza', async () => {
+    const updated = { ...linked, counts: { completed: 3, pending: 0, missing: 0, total: 4 } };
+    mockFetch({ 'GET /sagas/39': { body: linked }, 'PUT /sagas/39/links': { body: updated } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByText('Tales Dos');
+
+    await user.click(cover('Tales Dos'));
+    const dialog = screen.getByRole('dialog', { name: 'Unir versiones' });
+    await user.click(within(dialog).getByRole('checkbox', { name: /Tales Cuatro/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByText('3 completados · 0 pendientes · te faltan 0 de 4')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('sin sesión tocar un juego jugado no abre nada', async () => {
+    mockFetch({ 'GET /sagas/39': { body: linked } });
+    const user = userEvent.setup();
+    renderDetail();
+    await screen.findByText('Tales Dos');
+    await user.click(cover('Tales Dos'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('desde Sugerir se puede unir un faltante con la versión que jugué', async () => {
+    mockFetch({ 'GET /sagas/39': { body: linked }, 'GET /sagas/games/4/suggest': { body: { ...suggest, igdb_id: 4, name: 'Tales Cuatro' } } });
+    const user = userEvent.setup();
+    renderDetail({ isAuthenticated: true });
+    await screen.findByText('Tales Cuatro');
+
+    await user.click(cover('Tales Cuatro'));
+    await user.click(await screen.findByRole('button', { name: 'Ya lo jugué en otra versión' }));
+    expect(screen.getByRole('dialog', { name: 'Unir versiones' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Sugerir' })).not.toBeInTheDocument();
   });
 });
