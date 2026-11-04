@@ -14,7 +14,8 @@ import {
 } from './sagas-logic.js';
 
 const MAX_CANDIDATES = 5;
-const MAX_PARENT_HOPS = 3;
+// IGDB encadena versiones (remaster de un port de una edición…): Chrono Trigger de PC está a 4 saltos.
+const MAX_PARENT_HOPS = 6;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isSqlite = (db) => db instanceof SQLiteClient;
