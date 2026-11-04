@@ -62,9 +62,12 @@ async function registeredByCanonical(db) {
   return rows.map((r) => ({ sagaId: Number(r.saga_id), canonical: Number(r.canonical_igdb_id) }));
 }
 
-async function loadSagaGames(db, sagaId) {
+// Juegos de la saga; los archivados por el usuario quedan afuera (o solo ellos, con archived).
+async function loadSagaGames(db, sagaId, { archived = false } = {}) {
   const { rows } = await db.query(
-    sql(db, 'SELECT igdb_id, name, release_year, cover_url FROM saga_games WHERE saga_id = ? ORDER BY release_year ASC, igdb_id ASC'),
+    sql(db, `SELECT igdb_id, name, release_year, cover_url FROM saga_games
+             WHERE saga_id = ? AND igdb_id ${archived ? '' : 'NOT '}IN (SELECT igdb_id FROM saga_archived)
+             ORDER BY ${archived ? 'name ASC' : 'release_year ASC'}, igdb_id ASC`),
     [sagaId]
   );
   return rows.map((r) => ({ ...r, igdb_id: Number(r.igdb_id) }));
@@ -77,7 +80,43 @@ async function sagaDetail(db, sagaId) {
   if (!registered.some((r) => r.sagaId === sagaId)) return null;
   const status = await getStatusByCanonical(db);
   const saga = { id: Number(rows[0].id), name: rows[0].name };
-  return buildSagaDetail(saga, await loadSagaGames(db, sagaId), status);
+  const archived = (await loadSagaGames(db, sagaId, { archived: true })).map((g) => ({
+    igdb_id: g.igdb_id,
+    name: g.name,
+    release_year: g.release_year ?? null,
+    cover_url: g.cover_url ?? null,
+  }));
+  return { ...buildSagaDetail(saga, await loadSagaGames(db, sagaId), status), archived };
+}
+
+// Saga del juego en el caché, o null si no está en ninguna.
+async function sagaOfGame(db, igdbId) {
+  const { rows } = await db.query(sql(db, 'SELECT saga_id FROM saga_games WHERE igdb_id = ?'), [igdbId]);
+  return rows.length ? Number(rows[0].saga_id) : null;
+}
+
+// Archivar (PUT) o restaurar (DELETE) un juego de una saga. Responde el detalle de la saga.
+async function setArchived(req, res, archive) {
+  try {
+    const igdbId = parseId(req.params.igdbId);
+    const db = getDatabase();
+    const sagaId = igdbId ? await sagaOfGame(db, igdbId) : null;
+    if (!sagaId) return res.status(404).json({ error: 'Juego no encontrado' });
+    if (archive) {
+      const insert = DB_TYPE === 'sqlite'
+        ? 'INSERT OR IGNORE INTO saga_archived (igdb_id) VALUES (?)'
+        : 'INSERT INTO saga_archived (igdb_id) VALUES ($1) ON CONFLICT (igdb_id) DO NOTHING';
+      await db.query(insert, [igdbId]);
+    } else {
+      await db.query(sql(db, 'DELETE FROM saga_archived WHERE igdb_id = ?'), [igdbId]);
+    }
+    const detail = await sagaDetail(db, sagaId);
+    if (!detail) return res.status(404).json({ error: 'Saga no encontrada' });
+    res.json(detail);
+  } catch (error) {
+    logger.error({ err: error }, 'Error archiving saga game');
+    res.status(500).json({ error: 'No se pudo archivar el juego' });
+  }
 }
 
 router.get('/sagas', async (req, res) => {
@@ -181,6 +220,9 @@ router.get('/sagas/games/:igdbId/suggest', async (req, res) => {
     res.status(500).json({ error: 'Error fetching game suggestion' });
   }
 });
+
+router.put('/sagas/games/:igdbId/archive', sessionLimiter, requireJWT, (req, res) => setArchived(req, res, true));
+router.delete('/sagas/games/:igdbId/archive', sessionLimiter, requireJWT, (req, res) => setArchived(req, res, false));
 
 router.get('/sagas/:id', async (req, res) => {
   try {

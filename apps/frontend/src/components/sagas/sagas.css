@@ -386,3 +386,108 @@
   color: #e74c3c;
   font-size: 12px;
 }
+
+/* Menú discreto de opciones de la saga (archivar). */
+.saga-menu {
+  position: relative;
+}
+
+.saga-menu-toggle {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.saga-menu-toggle:hover,
+.saga-menu-toggle:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.saga-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #1e1e2a;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.saga-menu-list button {
+  background: none;
+  border: none;
+  color: #ddd;
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.saga-menu-list button:hover,
+.saga-menu-list button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.saga-archive-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+}
+
+.saga-cover-archive {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.saga-cover-archive:hover,
+.saga-cover-archive:focus-visible {
+  background: #c0392b;
+}
+
+.saga-archived {
+  margin-bottom: 16px;
+}
+
+.saga-archived ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.saga-archived li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+}

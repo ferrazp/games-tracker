@@ -13,12 +13,12 @@ const FILTERS = [
 
 const BADGES = { completed: '✓', pending: '…' };
 
-function Cover({ game, onSuggest }) {
+function Cover({ game, onSuggest, onArchive }) {
   const [broken, setBroken] = useState(false);
   const missing = game.status === 'missing';
   const showImage = game.cover_url && !broken;
 
-  const interactive = missing
+  const interactive = missing && !onArchive
     ? {
       role: 'button',
       tabIndex: 0,
@@ -32,8 +32,12 @@ function Cover({ game, onSuggest }) {
       {showImage && <img src={game.cover_url} alt={game.name} loading="lazy" onError={() => setBroken(true)} />}
       <span className="saga-cover-name">{game.name}</span>
       {BADGES[game.status] && <span className={`saga-badge ${game.status}`}>{BADGES[game.status]}</span>}
-      {missing && <span className="saga-cover-search" aria-hidden="true">🔍</span>}
-      {missing && <span className="saga-cover-hint">Sugerir</span>}
+      {missing && !onArchive && <span className="saga-cover-search" aria-hidden="true">🔍</span>}
+      {missing && !onArchive && <span className="saga-cover-hint">Sugerir</span>}
+      {onArchive && (
+        <button type="button" className="saga-cover-archive" aria-label={`Archivar ${game.name}`}
+          onClick={(e) => { e.stopPropagation(); onArchive(game.igdb_id); }}>✕</button>
+      )}
     </div>
   );
 }
@@ -45,8 +49,26 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
   const [suggestId, setSuggestId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveError, setArchiveError] = useState(null);
 
   const latestLoad = useRef(0);
+  const menuRef = useRef(null);
+
+  // El menú se cierra al tocar afuera o con Escape.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onDown = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   // Solo la última carga puede escribir el estado.
   const load = useCallback(async () => {
@@ -83,6 +105,29 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
     }
   };
 
+  // Archiva (PUT) o restaura (DELETE) un juego; el backend devuelve el detalle actualizado.
+  const setArchived = async (igdbId, archive) => {
+    setArchiveError(null);
+    try {
+      const response = await apiFetch(`${API_URL}/sagas/games/${igdbId}/archive`, {
+        method: archive ? 'PUT' : 'DELETE',
+        headers: getHeaders(),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'No se pudo archivar el juego');
+      latestLoad.current++;
+      setDetail(json);
+    } catch (err) {
+      if (!isSessionExpired(err)) setArchiveError(err.message);
+    }
+  };
+
+  const chooseMenu = (action) => {
+    setMenuOpen(false);
+    if (action === 'archive') setArchiving(true);
+    else setShowArchived((v) => !v);
+  };
+
   if (!detail) {
     return (
       <div className="saga-detail">
@@ -103,6 +148,7 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
     .map((g) => ({ ...g, games: g.games.filter((game) => filter === 'all' || game.status === filter) }))
     .filter((g) => g.games.length > 0);
   const emptyText = groups.length === 0 ? FILTERS.find((f) => f.key === filter)?.empty : null;
+  const archived = detail.archived ?? [];
 
   return (
     <div className="saga-detail">
@@ -114,8 +160,47 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
             {refreshing ? 'Actualizando...' : 'Actualizar saga'}
           </button>
         )}
+        {isAuthenticated && (
+          <div className="saga-menu" ref={menuRef}>
+            <button type="button" className="saga-menu-toggle" aria-label="Más opciones"
+              aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>⋯</button>
+            {menuOpen && (
+              <div className="saga-menu-list" role="menu">
+                <button type="button" role="menuitem" onClick={() => chooseMenu('archive')}>Archivar juegos</button>
+                <button type="button" role="menuitem" onClick={() => chooseMenu('list')}>Archivados ({archived.length})</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {refreshError && <p className="saga-error">{refreshError}</p>}
+      {archiveError && <p className="saga-error">{archiveError}</p>}
+
+      {archiving && (
+        <div className="saga-archive-bar">
+          <span>Tocá la ✕ de los juegos que no quieras ver en esta saga.</span>
+          <button type="button" className="btn btn-secondary" onClick={() => setArchiving(false)}>Listo</button>
+        </div>
+      )}
+
+      {showArchived && (
+        <section className="saga-archived">
+          <h3 className="saga-year">Archivados</h3>
+          {archived.length === 0
+            ? <p className="saga-muted">No hay juegos archivados.</p>
+            : (
+              <ul>
+                {archived.map((g) => (
+                  <li key={g.igdb_id}>
+                    <span>{g.name}{g.release_year && <span className="saga-muted"> · {g.release_year}</span>}</span>
+                    <button type="button" className="btn btn-secondary" aria-label={`Restaurar ${g.name}`}
+                      onClick={() => setArchived(g.igdb_id, false)}>Restaurar</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </section>
+      )}
 
       <div className="saga-filters">
         {FILTERS.map((f) => (
@@ -132,7 +217,10 @@ export default function SagaDetail({ sagaId, onBack, getHeaders, isAuthenticated
         <section key={g.year ?? 'sin-fecha'} className="saga-year-group">
           <h3 className="saga-year">{g.year ?? 'Sin fecha'}</h3>
           <div className="saga-covers">
-            {g.games.map((game) => <Cover key={game.igdb_id} game={game} onSuggest={setSuggestId} />)}
+            {g.games.map((game) => (
+              <Cover key={game.igdb_id} game={game} onSuggest={setSuggestId}
+                onArchive={archiving ? (id) => setArchived(id, true) : null} />
+            ))}
           </div>
         </section>
       ))}

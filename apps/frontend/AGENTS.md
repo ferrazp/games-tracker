@@ -74,6 +74,7 @@ El backend debe estar corriendo en `http://localhost:4000` (lo levanta `npm run 
 | `/sagas` | GET | sagas/Sagas.jsx | Sagas con conteos, portadas y cantidad de juegos sin resolver |
 | `/sagas/:id` | GET | sagas/SagaDetail.jsx | Juegos de una saga agrupados por año, con su estado |
 | `/sagas/:id/refresh` | POST | sagas/SagaDetail.jsx | Actualizar una saga desde IGDB (JWT; 503 sin credenciales, 502 si falla IGDB) |
+| `/sagas/games/:igdbId/archive` | PUT / DELETE | sagas/SagaDetail.jsx | Archivar o restaurar un juego de la saga desde el menú ⋯ (JWT) |
 | `/sagas/games/:igdbId/suggest` | GET | sagas/SuggestPanel.jsx | Versiones, versión sugerida y links de búsqueda de un juego faltante |
 | `/sagas/unresolved` | GET | sagas/UnresolvedGames.jsx | Juegos ambiguos con sus candidatos de IGDB (JWT) |
 | `/games/:id/igdb` | PUT | sagas/UnresolvedGames.jsx | Elegir el juego de IGDB (`igdb_id`) o sacarlo de las sagas (`null`) (JWT) |

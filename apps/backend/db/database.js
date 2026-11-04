@@ -103,6 +103,10 @@ class SQLiteClient {
         versions TEXT
       );
       CREATE INDEX IF NOT EXISTS idx_saga_games_saga_id ON saga_games(saga_id);
+      CREATE TABLE IF NOT EXISTS saga_archived (
+        igdb_id INTEGER PRIMARY KEY,
+        archived_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `;
 
     await new Promise((resolve, reject) => {
@@ -391,6 +395,12 @@ class PostgreSQLClient {
         )
       `);
       await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_saga_games_saga_id ON saga_games(saga_id)`);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS saga_archived (
+          igdb_id INTEGER PRIMARY KEY,
+          archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image TEXT`);
       await this.pool.query(`ALTER TABLE consoles ADD COLUMN IF NOT EXISTS image_type VARCHAR(20) DEFAULT 'bitmap'`);
