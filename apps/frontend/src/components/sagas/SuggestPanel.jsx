@@ -3,7 +3,7 @@ import API_URL from '../../config';
 
 const versionText = (v) => (v.year ? `${v.label} (${v.year})` : v.label);
 
-export default function SuggestPanel({ igdbId, onClose }) {
+export default function SuggestPanel({ igdbId, onClose, onLinkOther = null }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -49,6 +49,11 @@ export default function SuggestPanel({ igdbId, onClose }) {
               ))}
             </div>
           </>
+        )}
+        {onLinkOther && (
+          <button type="button" className="btn btn-secondary saga-panel-link" onClick={onLinkOther}>
+            Ya lo jugué en otra versión
+          </button>
         )}
         <button type="button" className="btn btn-secondary saga-panel-close" onClick={onClose}>Cerrar</button>
       </div>

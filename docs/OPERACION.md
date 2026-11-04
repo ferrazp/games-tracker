@@ -96,6 +96,7 @@ Si solo hay que volver a una versión puntual sin tocar datos: `npm run prod:dep
 - También corren en segundo plano al crear o editar un juego y al elegir su juego de IGDB, así no hay que esperar al job diario. Nunca corren dos a la vez: si llega un pedido mientras corren, se hace una corrida más al terminar.
 - Un error de IGDB en un juego o una saga se loguea y el resto sigue; lo que falló se reintenta en la próxima corrida.
 - Los juegos que se archivan desde el menú ⋯ de una saga quedan en la tabla `saga_archived`, aparte del caché de IGDB: los refrescos no los deshacen y se recuperan con **Restaurar** en *Archivados* del mismo menú.
+- Las versiones que el usuario une (tocar un juego → *Unir con otras versiones*, o *Ya lo jugué en otra versión* en Sugerir) quedan en `saga_links`, también aparte del caché de IGDB. Todas toman el estado de lo registrado del grupo y se separan desde el mismo panel.
 - Para ensayar con datos reales, levantar QA con un backup de prod (no toca prod):
   ```bash
   npm run qa:up -- --tag <tag> --restore <backup>
