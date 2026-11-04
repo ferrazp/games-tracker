@@ -1,6 +1,6 @@
 # Sagas — diseño
 
-Fecha: 2026-11-02 · Estado: borrador para aprobación del usuario
+Fecha: 2026-11-02 · Estado: aprobado e implementado en v1.8.0; ampliado hasta v1.10.0 (ver [Cambios posteriores](#cambios-posteriores-v180-a-v1100))
 
 ## Por qué
 
@@ -94,3 +94,36 @@ Proceso único, idempotente, que se puede volver a correr:
 - Cómo se dispara el completado de IDs (script `npm run`, endpoint protegido o paso automático al arrancar), siempre que sea idempotente y se pueda ensayar en QA.
 - Diseño visual fino dentro del estilo actual de la app (bocetos de referencia en `.superpowers/brainstorm/`, no versionados).
 - Paginación o carga perezosa de portadas si una saga es muy grande.
+
+## Cambios posteriores (v1.8.0 a v1.10.0)
+
+Pedidos del usuario después de usar la primera versión. Revierten en parte dos **no objetivos**: la pestaña ya no es solo de lectura (con sesión se puede archivar y unir) y el usuario sí corrige la saga, aunque sin editar lo que trae IGDB.
+
+### Archivar juegos de una saga (v1.8.0)
+
+- **Por qué:** IGDB mete en las series juegos que el usuario no considera de la saga (mobile, recopilaciones, spin-offs menores) y no se pueden sacar porque vuelven con cada refresco.
+- **Cómo:** menú ⋯ discreto en la pantalla de la saga → *Archivar*; *Archivados* lista los archivados y los restaura. Un archivado sale de la grilla y de los totales, incluso si está registrado.
+- **Datos:** tabla `saga_archived`, aparte del caché de IGDB, para que los refrescos no lo deshagan.
+
+### Portadas laterales de las sagas (v1.9.0)
+
+- **Por qué:** los paneles de los costados mostraban portadas al azar del catálogo; en Sagas el usuario quería ver las de sus sagas.
+- **Cómo:** en la pestaña Sagas, `GET /sagas` devuelve `side_covers` (hasta 16, alternando entre sagas, primero las de juegos registrados); dentro de una saga, se usan las portadas de esa saga.
+
+### Cadenas largas de versiones (v1.9.1)
+
+- **Por qué:** *Chrono Trigger* (PC, 2018) llega al original recién después de 4 saltos de `version_parent` en IGDB y quedaba sin identificar.
+- **Cómo:** se sube hasta 6 saltos (`climbToCanonical`), pidiendo a IGDB los padres que falten.
+
+### Unir versiones de un mismo juego (v1.10.0)
+
+- **Por qué:** IGDB trata como juegos distintos versiones que para el usuario son el mismo (*Final Fantasy III* de 1990 y el 3D de 2006). Al usuario no le importa la completitud: si terminó una versión, quiere que el juego cuente como jugado. Pidió explícitamente **no ocultar** las otras versiones, porque le gusta ver el año de cada una.
+- **Cómo:** tocar un juego registrado → *Unir con otras versiones* (o, en un faltante, Sugerir → *Ya lo jugué en otra versión*). Se marcan las versiones; la **principal** (por defecto la registrada) lleva ⭐. Todas se ven a color con un borde del mismo color por grupo y toman el estado más avanzado de lo registrado del grupo; el total no cambia. *Separar* deshace el grupo.
+- **Datos:** tabla `saga_links` (`igdb_id` → `main_igdb_id`), aparte del caché de IGDB. Un juego está en un solo grupo; unir lo saca de su grupo anterior.
+- **Cuidado conocido:** IGDB tiene un *Final Fantasy III* de 1994 que en realidad es el VI (nombre de la versión norteamericana): no hay que unirlo al III.
+
+### Pendientes conocidos
+
+- `igdb_resolution` no se invalida sola: si IGDB corrige un padre, hay que borrar la fila a mano para que se vuelva a resolver.
+- `GET /sagas` hace una consulta por saga (N+1); con pocas sagas no se nota.
+- El panel Sugerir no se cierra con Escape ni declara `aria-modal`.

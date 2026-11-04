@@ -1,39 +1,24 @@
-> ⚠️ **Obsoleto desde v1.5.0.** Los `docker-compose*.yml` y `nginx.prod.conf` de este backend se eliminaron. QA y Prod se levantan con `deploy/compose.yaml` y los scripts del monorepo: ver [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
-
 ## 🔄 Cambios en el Esquema BD
 
-### ⚠️ IMPORTANTE: Mantener este Documento Actualizado
+El esquema lo crea `initialize()` en [`db/database.js`](../../db/database.js) en cada arranque, y cada deploy lo aplica solo. Por eso todo cambio tiene que ser **aditivo e idempotente**.
 
-Cuando realices cambios en el esquema:
+### Pasos
 
-1. **Actualiza `init.sql`** con cambios SQL
-2. **Actualiza `db/database.js`** si hay diferencias SQL entre BD
-3. **Documenta en este AGENTS.md**:
-   - Nueva tabla: sección completa
-   - Campo nuevo: fila en tabla de campos
-   - Índice: agregar en sección índices
-4. **Prueba ambas BDs**:
+1. **Escribir primero el test** (TDD) que use la tabla o columna nueva: `tests/integration/` corre contra SQLite.
+2. **Editar los dos bloques de `initialize()`**:
+   - SQLite (`schemaSQL` y los `ALTER TABLE … ADD COLUMN` que ignoran el error si ya existe).
+   - PostgreSQL (`this.pool.query`, con `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`).
+3. **Nunca** renombrar ni borrar columnas o tablas con datos de prod: agregar nuevas y migrar en código.
+4. **Documentar**:
+   - Un `migrations/NNN_descripcion.sql` documental (`CREATE … IF NOT EXISTS`), con el porqué.
+   - La tabla o columna en [Esquema de Base de Datos](../esquema-base-datos/AGENTS.md), con su porqué.
+   - Si cambia la operación (jobs, backups), en [`docs/OPERACION.md`](../../../../docs/OPERACION.md).
+5. **Probar en Postgres** antes de publicar: imágenes locales en QA.
    ```bash
-   npm run dev:sqlite        # Prueba SQLite
-   docker-compose up -d && npm run dev:postgres  # Prueba PostgreSQL
+   docker build -f apps/backend/Dockerfile -t ghcr.io/ferrazp/games-tracker-backend:local .
+   docker build -f apps/frontend/Dockerfile -t ghcr.io/ferrazp/games-tracker-frontend:local .
+   npm run qa:up -- --tag local --no-pull
    ```
+   Para ensayar con datos reales: `npm run qa:up -- --tag <tag> --restore <backup de prod>`.
 
-### Plantilla para Nueva Tabla
-
-```markdown
-### Tabla: \`nombre_tabla\`
-
-\`\`\`sql
-CREATE TABLE nombre_tabla (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- SQLite
-    -- id SERIAL PRIMARY KEY,              -- PostgreSQL
-    campo1 TIPO CONSTRAINTS,
-    campo2 TIPO CONSTRAINTS
-);
-\`\`\`
-
-| Campo | Tipo | Constraints | Descripción |
-|-------|------|-------------|-------------|
-| \`id\` | INTEGER/SERIAL | PRIMARY KEY | ID único |
-| \`campo1\` | TIPO | CONSTRAINTS | Descripción |
-```
+`prod:deploy` hace un backup antes de recrear los contenedores, así que un cambio de esquema que salga mal se puede revertir con `prod:rollback` (solo a pedido del usuario).
